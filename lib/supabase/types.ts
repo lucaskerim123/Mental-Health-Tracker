@@ -26,6 +26,7 @@ export interface MentalHealthIncident {
   severity: number
   description: string
   is_sensitive: boolean
+  sensitive_fields: string[]
   personal_notes: string | null
   notes: string | null
   created_at: string
@@ -41,6 +42,7 @@ export interface DrugTrackerSession {
   personal_reflection: string | null
   notes: string | null
   is_sensitive: boolean
+  sensitive_fields: string[]
   created_at: string
 }
 

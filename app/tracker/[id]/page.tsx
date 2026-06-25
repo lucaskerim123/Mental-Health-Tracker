@@ -8,15 +8,31 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
   const { id } = await params
   const profile = await getProfile()
   if (!profile) redirect('/login')
+
   const supabase = await createClient()
   const [{ data: session }, { data: sleepLog }] = await Promise.all([
     supabase.from('drug_tracker_sessions').select('*').eq('id', id).single(),
     supabase.from('sleep_log').select('*').eq('session_id', id).order('logged_at', { ascending: false }),
   ])
+
   if (!session) notFound()
+
   const canViewSensitive = profile.role !== 'viewer'
   const isAdmin = profile.role === 'admin'
-  const safeSession = canViewSensitive ? session : { ...session, personal_reflection: null, ...(session.is_sensitive ? { any_incidents: null, notes: null } : {}) }
+
+  const sensitiveFieldMask = !canViewSensitive
+    ? Object.fromEntries(
+        (session.sensitive_fields ?? []).map((f: string) => [f, null])
+      )
+    : {}
+
+  const safeSession = canViewSensitive ? session : {
+    ...session,
+    personal_reflection: null,
+    ...(session.is_sensitive ? { any_incidents: null, notes: null } : {}),
+    ...sensitiveFieldMask,
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar role={profile.role} displayName={profile.display_name} />
