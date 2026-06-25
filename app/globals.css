@@ -1,0 +1,62 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: 0 0% 4%;
+  --foreground: 0 0% 88%;
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 88%;
+  --popover: 0 0% 7%;
+  --popover-foreground: 0 0% 88%;
+  --primary: 0 72% 42%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 0 0% 12%;
+  --secondary-foreground: 0 0% 88%;
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 50%;
+  --accent: 35 80% 50%;
+  --accent-foreground: 0 0% 4%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 16%;
+  --input: 0 0% 10%;
+  --ring: 0 72% 42%;
+  --radius: 0.25rem;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Space Grotesk', 'Geist', monospace;
+}
+
+.vault-glow {
+  box-shadow: 0 0 0 1px hsl(0 72% 42% / 0.3), 0 0 24px hsl(0 72% 42% / 0.08);
+}
+
+.vault-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    hsl(0 0% 100% / 0.01) 2px,
+    hsl(0 0% 100% / 0.01) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+@layer utilities {
+  .vault-input {
+    @apply w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-red-900/60 transition-colors;
+  }
+}
