@@ -26,7 +26,7 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  const publicPaths = ['/login', '/join']
+  const publicPaths = ['/login', '/join', '/setup', '/api/setup']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
 
   if (!user && !isPublic) {
@@ -41,5 +41,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
