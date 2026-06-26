@@ -22,7 +22,7 @@ export default function SetupForm() {
       body: JSON.stringify({ display_name: name, email, password }),
     })
     const data = await res.json()
-    if (!res.ok) { setError(data.error || 'Setup failed'); setLoading(false); return }
+    if (!res.ok) { setError(data.error || data.message || `Setup failed (${res.status})`); setLoading(false); return }
     router.push('/login')
   }
 

@@ -20,7 +20,12 @@ export async function POST(req: NextRequest) {
     email_confirm: true,
     user_metadata: { display_name },
   })
-  if (authError) return NextResponse.json({ error: authError.message }, { status: 400 })
+  if (authError) {
+    console.error('setup authError:', JSON.stringify(authError))
+    const msg = authError.message || (authError as { error_description?: string }).error_description
+      || JSON.stringify(authError) || 'Auth error'
+    return NextResponse.json({ error: msg }, { status: 400 })
+  }
 
   const uid = authData.user.id
   const { error: profileError } = await admin
@@ -28,8 +33,9 @@ export async function POST(req: NextRequest) {
     .upsert({ id: uid, display_name, role: 'admin' }, { onConflict: 'id' })
 
   if (profileError) {
+    console.error('setup profileError:', JSON.stringify(profileError))
     await admin.auth.admin.deleteUser(uid)
-    return NextResponse.json({ error: profileError.message }, { status: 400 })
+    return NextResponse.json({ error: profileError.message || profileError.details || JSON.stringify(profileError) }, { status: 400 })
   }
 
   return NextResponse.json({ success: true })
