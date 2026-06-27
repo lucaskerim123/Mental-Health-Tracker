@@ -156,10 +156,13 @@ export default function QuickSessionPanel({ activeSession, recentSessions }: Pro
       )}
 
       <section className="rounded-[2rem] border border-zinc-800 bg-zinc-950 p-5">
-        <p className="mb-3 text-[10px] font-mono uppercase tracking-widest text-zinc-600">Recent sessions</p>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Recent sessions</p>
+          <Link href="/mobile/sessions" className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">All</Link>
+        </div>
         <div className="space-y-2">
           {recentSessions.length ? recentSessions.map(session => (
-            <Link key={session.id} href={`/tracker/${session.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-4 py-3">
+            <Link key={session.id} href={`/mobile/sessions/${session.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-4 py-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-mono text-zinc-500">{formatDate(session.date_start)}</span>
                 <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] font-mono text-zinc-400">{session.date_end ? 'Closed' : 'Open'}</span>
