@@ -7,7 +7,7 @@ import { formatDate } from '@/lib/utils'
 
 export default async function MobileIncidentsPage() {
   const profile = await getProfile()
-  if (!profile) redirect('/login?next=/mobile/incidents')
+  if (!profile) redirect('/mobile/login?next=/mobile/incidents')
 
   const isAdmin = profile.role === 'admin'
   const supabase = await createClient()
