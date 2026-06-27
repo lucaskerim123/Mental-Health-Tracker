@@ -17,5 +17,4 @@ export default async function LockdownPage() {
   const message = cfg.lockdown_message ?? 'Site is on lockdown.'
 
   return <LockdownDisplay siteName={siteName} message={message} />
-}  )
-}
+}  
