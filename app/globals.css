@@ -1,0 +1,68 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: 0 0% 7%;
+  --foreground: 0 0% 92%;
+  --card: 0 0% 10%;
+  --card-foreground: 0 0% 92%;
+  --popover: 0 0% 10%;
+  --popover-foreground: 0 0% 92%;
+  --primary: 0 72% 50%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 92%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 55%;
+  --accent: 35 80% 55%;
+  --accent-foreground: 0 0% 6%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 22%;
+  --input: 0 0% 13%;
+  --ring: 0 72% 50%;
+  --radius: 0.25rem;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Space Grotesk', 'Geist', monospace;
+}
+
+/* Vault glow effect */
+.vault-glow {
+  box-shadow: 0 0 0 1px hsl(0 72% 42% / 0.3), 0 0 24px hsl(0 72% 42% / 0.08);
+}
+
+/* Subtle scanline texture */
+.vault-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    hsl(0 0% 100% / 0.01) 2px,
+    hsl(0 0% 100% / 0.01) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+@layer utilities {
+  .vault-input {
+    @apply w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-red-900/60 transition-colors;
+  }
+
+  .phone-input {
+    @apply w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-base text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-zinc-600;
+  }
+}
