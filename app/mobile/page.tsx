@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { AlertTriangle, Clock3, FileText, Plus, TimerReset } from 'lucide-react'
+import { AlertTriangle, FileText, Plus, TimerReset } from 'lucide-react'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { daysUp, formatDate, formatDateTime } from '@/lib/utils'
@@ -66,15 +66,6 @@ export default async function MobileHomePage() {
             </div>
             <TimerReset className="mt-1 h-6 w-6 text-amber-700" />
           </div>
-          {isAdmin && (
-            <Link href="/mobile/session" className="mt-5 flex items-center justify-between rounded-[1.5rem] border border-amber-900/60 bg-amber-950 px-5 py-5 active:scale-[0.99]">
-              <div>
-                <p className="text-lg font-semibold text-amber-100">Open Session Controls</p>
-                <p className="mt-1 text-xs font-mono text-amber-300/70">Start · sleep · note · close</p>
-              </div>
-              <Clock3 className="h-7 w-7 text-amber-300" />
-            </Link>
-          )}
         </section>
 
         <section className="mb-5 grid grid-cols-1 gap-3">
