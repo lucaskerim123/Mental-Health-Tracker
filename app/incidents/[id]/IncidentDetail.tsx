@@ -137,6 +137,10 @@ export default function IncidentDetail({ incident, isAdmin, canViewSensitive, tr
 
         {editing ? (
           <>
+            <Field label="Date & Time">
+              <input type="datetime-local" value={form.occurred_at.slice(0, 16)} onChange={e => set('occurred_at', e.target.value)} className="vault-input" required />
+            </Field>
+
             <Field label="Severity">
               <input type="range" min={1} max={10} value={form.severity} onChange={e => set('severity', Number(e.target.value))} className="w-full accent-red-800" />
               <span className="text-[10px] font-mono text-zinc-500">{form.severity}/10</span>
