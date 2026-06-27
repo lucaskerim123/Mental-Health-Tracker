@@ -32,6 +32,12 @@ export interface MentalHealthIncident {
   names_involved: string | null
   substance_use: 'no' | 'yes' | 'comedown' | null
   emergency_services: boolean
+  police_called: boolean
+  ambulance_called: boolean
+  was_arrested: boolean
+  was_sectioned: boolean
+  people_involved: string[]
+  tracker_session_id: string | null
   created_at: string
 }
 

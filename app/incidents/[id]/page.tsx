@@ -10,11 +10,10 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
   if (!profile) redirect('/login')
 
   const supabase = await createClient()
-  const { data: incident } = await supabase
-    .from('mental_health_incidents')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const [{ data: incident }, { data: trackerSessions }] = await Promise.all([
+    supabase.from('mental_health_incidents').select('*').eq('id', id).single(),
+    supabase.from('drug_tracker_sessions').select('id, date_start, date_end').order('date_start', { ascending: false }),
+  ])
 
   if (!incident) notFound()
 
@@ -37,7 +36,12 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
   return (
     <AppShell role={profile.role} displayName={profile.display_name}>
       <main className="max-w-2xl mx-auto px-4 py-8">
-        <IncidentDetail incident={safeIncident} isAdmin={isAdmin} canViewSensitive={canViewSensitive} />
+        <IncidentDetail
+          incident={safeIncident}
+          isAdmin={isAdmin}
+          canViewSensitive={canViewSensitive}
+          trackerSessions={trackerSessions ?? []}
+        />
       </main>
     </AppShell>
   )
