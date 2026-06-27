@@ -7,7 +7,7 @@ import { daysUp, formatDate } from '@/lib/utils'
 
 export default async function MobileSessionsPage() {
   const profile = await getProfile()
-  if (!profile) redirect('/login?next=/mobile/sessions')
+  if (!profile) redirect('/mobile/login?next=/mobile/sessions')
 
   const supabase = await createClient()
   const { data: sessions } = await supabase
