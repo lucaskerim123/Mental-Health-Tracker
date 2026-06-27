@@ -8,7 +8,7 @@ import { z } from 'zod'
 
 const SERVER_NAME = 'mental-health-incident-system'
 const VERSION = '0.2.0'
-const SESSION_TABLE = 'drug_tracker_session'
+const SESSION_TABLE = 'drug_tracker_sessions'
 
 type DrugTrackerSession = {
   id: string

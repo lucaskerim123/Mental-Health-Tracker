@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mental-health-incident-system": {
+      "command": "node",
+      "args": ["--env-file=.env.local", "mcp/his/build/index.js"]
+    }
+  }
+}
