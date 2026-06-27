@@ -21,7 +21,9 @@ export async function POST(req: NextRequest) {
     user_metadata: { display_name },
   })
   if (authError) {
-    const msg = authError.message || JSON.stringify(authError)
+    console.error('setup authError:', JSON.stringify(authError))
+    const msg = authError.message || (authError as { error_description?: string }).error_description
+      || JSON.stringify(authError) || 'Auth error'
     return NextResponse.json({ error: msg }, { status: 400 })
   }
 
@@ -31,8 +33,9 @@ export async function POST(req: NextRequest) {
     .upsert({ id: uid, display_name, role: 'admin' }, { onConflict: 'id' })
 
   if (profileError) {
+    console.error('setup profileError:', JSON.stringify(profileError))
     await admin.auth.admin.deleteUser(uid)
-    return NextResponse.json({ error: profileError.message || JSON.stringify(profileError) }, { status: 400 })
+    return NextResponse.json({ error: profileError.message || profileError.details || JSON.stringify(profileError) }, { status: 400 })
   }
 
   return NextResponse.json({ success: true })
