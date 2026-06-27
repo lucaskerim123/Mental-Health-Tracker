@@ -93,6 +93,28 @@ export interface Permission {
   granted: boolean
 }
 
+export interface Ban {
+  id: string
+  type: 'user' | 'ip'
+  value: string
+  reason: string | null
+  created_by: string | null
+  expires_at: string | null
+  created_at: string
+}
+
+export interface ActivityLog {
+  id: string
+  user_id: string | null
+  display_name: string | null
+  action: string
+  resource_type: string | null
+  resource_id: string | null
+  ip_address: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
+
 // Role-based defaults (checked when no override row exists)
 export const ROLE_DEFAULTS: Record<Role, Partial<Record<Resource, Action[]>>> = {
   admin: {
