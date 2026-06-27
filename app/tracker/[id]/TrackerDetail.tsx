@@ -111,7 +111,7 @@ export default function TrackerDetail({ session, sleepLog, isAdmin, canViewSensi
               </>
             ) : (
               <>
-                {isOngoing && <button onClick={closeSession} title="Close session" className="p-2 text-amber-800 hover:text-amber-600"><StopCircle className="w-4 h-4" /></button>}
+                {isOngoing && <button onClick={closeSession} className="p-2 text-amber-800 hover:text-amber-600"><StopCircle className="w-4 h-4" /></button>}
                 <button onClick={() => setEditing(true)} className="p-2 text-zinc-500 hover:text-zinc-300"><Edit2 className="w-4 h-4" /></button>
                 <button onClick={deleteSession} disabled={deleting} className="p-2 text-red-900 hover:text-red-700"><Trash2 className="w-4 h-4" /></button>
               </>
@@ -120,7 +120,6 @@ export default function TrackerDetail({ session, sleepLog, isAdmin, canViewSensi
         )}
       </div>
 
-      {/* Days Up Banner */}
       <div className={`border p-4 mb-6 text-center ${isOngoing ? 'border-amber-900/40 bg-amber-950/10' : 'border-zinc-800 bg-zinc-950'}`}>
         <p className="text-4xl font-mono font-bold text-zinc-200">{days}</p>
         <p className="text-[10px] tracking-[0.4em] uppercase font-mono text-zinc-600 mt-1">
@@ -128,7 +127,6 @@ export default function TrackerDetail({ session, sleepLog, isAdmin, canViewSensi
         </p>
       </div>
 
-      {/* Sleep Counter */}
       <div className="border border-zinc-800 bg-zinc-950 p-5 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -136,28 +134,15 @@ export default function TrackerDetail({ session, sleepLog, isAdmin, canViewSensi
             <p className="text-2xl font-mono text-zinc-200 mt-1">{s.sleep_hours}h</p>
           </div>
           {isAdmin && (
-            <button
-              onClick={() => setShowSleepInput(v => !v)}
-              className="flex items-center gap-1.5 text-[11px] font-mono text-amber-800 border border-amber-900/40 px-3 py-1.5 hover:bg-amber-950/20 transition-colors"
-            >
+            <button onClick={() => setShowSleepInput(v => !v)} className="flex items-center gap-1.5 text-[11px] font-mono text-amber-800 border border-amber-900/40 px-3 py-1.5 hover:bg-amber-950/20 transition-colors">
               <Plus className="w-3 h-3" /> Add Sleep
             </button>
           )}
         </div>
         {showSleepInput && (
           <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-800">
-            <input
-              type="number" step="0.5" min="0.5" max="24"
-              value={sleepInput}
-              onChange={e => setSleepInput(e.target.value)}
-              placeholder="Hours (e.g. 2.5)"
-              className="vault-input flex-1 text-sm"
-            />
-            <button
-              onClick={addSleep}
-              disabled={addingSleep}
-              className="text-[11px] font-mono text-amber-200 bg-amber-950 border border-amber-900/60 px-4 py-2 hover:bg-amber-900 disabled:opacity-40 uppercase tracking-widest"
-            >
+            <input type="number" step="0.5" min="0.5" max="24" value={sleepInput} onChange={e => setSleepInput(e.target.value)} placeholder="Hours (e.g. 2.5)" className="vault-input flex-1 text-sm" />
+            <button onClick={addSleep} disabled={addingSleep} className="text-[11px] font-mono text-amber-200 bg-amber-950 border border-amber-900/60 px-4 py-2 hover:bg-amber-900 disabled:opacity-40 uppercase tracking-widest">
               {addingSleep ? '...' : 'Add'}
             </button>
           </div>
@@ -174,7 +159,6 @@ export default function TrackerDetail({ session, sleepLog, isAdmin, canViewSensi
         )}
       </div>
 
-      {/* Notes */}
       <div className="border border-zinc-800 bg-zinc-950 p-5 space-y-5">
         {editing ? (
           <>
@@ -182,7 +166,10 @@ export default function TrackerDetail({ session, sleepLog, isAdmin, canViewSensi
               <textarea value={s.any_incidents ?? ''} onChange={e => setS(prev => ({ ...prev, any_incidents: e.target.value }))} rows={3} className="vault-input w-full resize-none" />
             </LockableField>
             {canViewSensitive && (
-              <EditField label="Personal Reflection (always restricted)" value={s.personal_reflection ?? ''} onChange={v => setS(prev => ({ ...prev, personal_reflection: v }))} rows={6} />
+              <div className="space-y-1.5">
+                <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Personal Reflection (always restricted)</label>
+                <textarea value={s.personal_reflection ?? ''} onChange={e => setS(prev => ({ ...prev, personal_reflection: e.target.value }))} rows={6} className="vault-input w-full resize-none" />
+              </div>
             )}
             <LockableField label="Notes" field="notes" isSensitive={isSensitive} toggle={toggleSensitiveField} showToggle={isAdmin}>
               <textarea value={s.notes ?? ''} onChange={e => setS(prev => ({ ...prev, notes: e.target.value }))} rows={3} className="vault-input w-full resize-none" />
@@ -205,24 +192,8 @@ export default function TrackerDetail({ session, sleepLog, isAdmin, canViewSensi
   )
 }
 
-function EditField({ label, value, onChange, rows = 3 }: { label: string; value: string; onChange: (v: string) => void; rows?: number }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">{label}</label>
-      <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows} className="vault-input w-full resize-none" />
-    </div>
-  )
-}
-
-function LockableField({
-  label, field, isSensitive, toggle, showToggle, children,
-}: {
-  label: string
-  field: string
-  isSensitive: (f: string) => boolean
-  toggle: (f: string) => void
-  showToggle: boolean
-  children: React.ReactNode
+function LockableField({ label, field, isSensitive, toggle, showToggle, children }: {
+  label: string; field: string; isSensitive: (f: string) => boolean; toggle: (f: string) => void; showToggle: boolean; children: React.ReactNode
 }) {
   const locked = isSensitive(field)
   return (
@@ -230,12 +201,9 @@ function LockableField({
       <div className="flex items-center justify-between">
         <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">{label}</label>
         {showToggle && (
-          <button
-            type="button"
-            onClick={() => toggle(field)}
-            title={locked ? 'Restricted to counsellors+ — click to unrestrict' : 'Click to restrict to counsellors+'}
-            className={`p-0.5 transition-colors ${locked ? 'text-red-700' : 'text-zinc-700 hover:text-zinc-500'}`}
-          >
+          <button type="button" onClick={() => toggle(field)}
+            title={locked ? 'Restricted to counsellors+' : 'Click to restrict to counsellors+'}
+            className={`p-0.5 transition-colors ${locked ? 'text-red-700' : 'text-zinc-700 hover:text-zinc-500'}`}>
             <Lock className="w-3 h-3" />
           </button>
         )}

@@ -89,8 +89,7 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
     const key = `${resource}-${action}`
     setToggling(key)
     if (next === null) {
-      await supabase.from('permissions').delete()
-        .eq('user_id', user.id).eq('resource', resource).eq('action', action)
+      await supabase.from('permissions').delete().eq('user_id', user.id).eq('resource', resource).eq('action', action)
     } else {
       await supabase.from('permissions').upsert(
         { user_id: user.id, resource, action, granted: next },
@@ -119,8 +118,7 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
   async function resetResource(resource: Resource) {
     const actions = RESOURCE_ACTIONS[resource]
     await Promise.all(actions.map(action =>
-      supabase.from('permissions').delete()
-        .eq('user_id', user.id).eq('resource', resource).eq('action', action)
+      supabase.from('permissions').delete().eq('user_id', user.id).eq('resource', resource).eq('action', action)
     ))
     setPermMap(prev => ({ ...prev, [resource]: {} }))
     toast.success(`${resource} permissions reset to role defaults.`)
@@ -134,10 +132,7 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
         { onConflict: 'user_id,resource,action' }
       )
     ))
-    setPermMap(prev => ({
-      ...prev,
-      [resource]: Object.fromEntries(actions.map(a => [a, granted])),
-    }))
+    setPermMap(prev => ({ ...prev, [resource]: Object.fromEntries(actions.map(a => [a, granted])) }))
     toast.success(`All ${resource} permissions ${granted ? 'granted' : 'denied'}.`)
   }
 
@@ -146,20 +141,12 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
 
   return (
     <div className="space-y-6">
-      {/* Profile */}
       <div className="border border-zinc-800 bg-zinc-950 p-5">
         <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500 mb-5">Profile</p>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
           <div className="space-y-1.5">
             <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Display Name</label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={e => setDisplayName(e.target.value)}
-              disabled={isMe}
-              className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-600 transition-colors disabled:opacity-40"
-            />
+            <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} disabled={isMe} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-600 transition-colors disabled:opacity-40" />
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Email</label>
@@ -167,12 +154,7 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Role</label>
-            <select
-              value={role}
-              onChange={e => { setRole(e.target.value as Role); setRoleChanged(true) }}
-              disabled={isMe}
-              className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none disabled:opacity-40"
-            >
+            <select value={role} onChange={e => { setRole(e.target.value as Role); setRoleChanged(true) }} disabled={isMe} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none disabled:opacity-40">
               <option value="viewer">viewer</option>
               <option value="counsellor">counsellor</option>
               <option value="admin">admin</option>
@@ -183,103 +165,51 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
             <input type="text" value={new Date(user.created_at).toLocaleDateString()} readOnly className="w-full bg-black border border-zinc-800/50 text-zinc-500 px-3 py-2 text-sm font-mono cursor-default" />
           </div>
         </div>
-
         {roleChanged && (
           <div className="flex items-start gap-2 border border-amber-900/40 bg-amber-950/10 px-3 py-2 mb-4">
             <AlertTriangle className="w-3 h-3 text-amber-700 mt-0.5 shrink-0" />
-            <p className="text-[10px] font-mono text-amber-700/80">
-              Override permissions are preserved when role changes — reset individual resources manually if needed.
-            </p>
+            <p className="text-[10px] font-mono text-amber-700/80">Override permissions are preserved when role changes — reset individual resources manually if needed.</p>
           </div>
         )}
-
         <div className="flex items-center justify-between">
-          <button
-            onClick={saveProfile}
-            disabled={!profileChanged || saving || isMe}
-            className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-zinc-500 text-[11px] font-mono tracking-widest uppercase transition-colors disabled:opacity-30"
-          >
+          <button onClick={saveProfile} disabled={!profileChanged || saving || isMe} className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-zinc-500 text-[11px] font-mono tracking-widest uppercase transition-colors disabled:opacity-30">
             <Save className="w-3 h-3" />
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
           {!isMe && (
-            <button
-              onClick={deleteUser}
-              className="flex items-center gap-2 px-4 py-2 border border-red-900/40 text-red-800 hover:border-red-700 hover:text-red-600 text-[11px] font-mono tracking-widest uppercase transition-colors"
-            >
-              <Trash2 className="w-3 h-3" />
-              Delete Account
+            <button onClick={deleteUser} className="flex items-center gap-2 px-4 py-2 border border-red-900/40 text-red-800 hover:border-red-700 hover:text-red-600 text-[11px] font-mono tracking-widest uppercase transition-colors">
+              <Trash2 className="w-3 h-3" /> Delete Account
             </button>
           )}
         </div>
       </div>
 
-      {/* Permission Accordion */}
       <div className="border border-zinc-800 bg-zinc-950">
         <div className="px-5 py-3 border-b border-zinc-800 flex items-center justify-between">
           <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">Permissions</p>
-          {total > 0 && (
-            <span className="text-[9px] font-mono text-zinc-600 tracking-widest">{total} override{total !== 1 ? 's' : ''} active</span>
-          )}
+          {total > 0 && <span className="text-[9px] font-mono text-zinc-600 tracking-widest">{total} override{total !== 1 ? 's' : ''} active</span>}
         </div>
-
         <div className="divide-y divide-zinc-800/60">
           {RESOURCES.map(resource => {
             const actions = RESOURCE_ACTIONS[resource]
             const count = overrideCount(permMap, resource)
             const isOpen = expanded[resource] ?? false
-
             return (
               <div key={resource}>
-                {/* Resource header */}
                 <div className="flex items-center gap-3 px-5 py-3">
-                  <button
-                    type="button"
-                    onClick={() => setExpanded(prev => ({ ...prev, [resource]: !isOpen }))}
-                    className="flex items-center gap-2 flex-1 text-left"
-                  >
-                    {isOpen
-                      ? <ChevronDown className="w-3 h-3 text-zinc-600 shrink-0" />
-                      : <ChevronRight className="w-3 h-3 text-zinc-600 shrink-0" />
-                    }
+                  <button type="button" onClick={() => setExpanded(prev => ({ ...prev, [resource]: !isOpen }))} className="flex items-center gap-2 flex-1 text-left">
+                    {isOpen ? <ChevronDown className="w-3 h-3 text-zinc-600 shrink-0" /> : <ChevronRight className="w-3 h-3 text-zinc-600 shrink-0" />}
                     <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">{resource}</span>
-                    {count > 0 && (
-                      <span className="text-[9px] font-mono bg-zinc-800 text-zinc-500 px-1.5 py-0.5 tracking-wider">
-                        {count} override{count !== 1 ? 's' : ''}
-                      </span>
-                    )}
+                    {count > 0 && <span className="text-[9px] font-mono bg-zinc-800 text-zinc-500 px-1.5 py-0.5 tracking-wider">{count} override{count !== 1 ? 's' : ''}</span>}
                   </button>
                   {!isMe && (
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => resetResource(resource)}
-                        className="text-[9px] font-mono text-zinc-600 hover:text-zinc-400 tracking-widest uppercase px-2 py-1 border border-zinc-800 hover:border-zinc-600 transition-colors"
-                        title="Reset to role defaults"
-                      >
-                        Reset
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setResourceAll(resource, true)}
-                        className="text-[9px] font-mono text-green-900 hover:text-green-700 tracking-widest uppercase px-2 py-1 border border-green-900/30 hover:border-green-800 transition-colors"
-                        title="Explicitly grant all"
-                      >
-                        Grant All
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setResourceAll(resource, false)}
-                        className="text-[9px] font-mono text-red-900 hover:text-red-700 tracking-widest uppercase px-2 py-1 border border-red-900/30 hover:border-red-800 transition-colors"
-                        title="Explicitly deny all"
-                      >
-                        Deny All
-                      </button>
+                      <button type="button" onClick={() => resetResource(resource)} className="text-[9px] font-mono text-zinc-600 hover:text-zinc-400 tracking-widest uppercase px-2 py-1 border border-zinc-800 hover:border-zinc-600 transition-colors">Reset</button>
+                      <button type="button" onClick={() => setResourceAll(resource, true)} className="text-[9px] font-mono text-green-900 hover:text-green-700 tracking-widest uppercase px-2 py-1 border border-green-900/30 hover:border-green-800 transition-colors">Grant All</button>
+                      <button type="button" onClick={() => setResourceAll(resource, false)} className="text-[9px] font-mono text-red-900 hover:text-red-700 tracking-widest uppercase px-2 py-1 border border-red-900/30 hover:border-red-800 transition-colors">Deny All</button>
                     </div>
                   )}
                 </div>
-
-                {/* Expanded action rows */}
                 {isOpen && (
                   <div className="border-t border-zinc-800/40">
                     {actions.map(action => {
@@ -289,20 +219,12 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
                       const isOverride = override !== null
                       const key = `${resource}-${action}`
                       const busy = toggling === key
-
                       return (
                         <div key={action} className="flex items-center justify-between px-8 py-2.5 hover:bg-zinc-900/30 transition-colors">
                           <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-mono text-zinc-500 tracking-wide">
-                              {action.replace(/_/g, ' ')}
-                            </span>
-                            {isOverride && (
-                              <span className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 bg-zinc-800/60 text-zinc-600">
-                                override
-                              </span>
-                            )}
+                            <span className="text-[11px] font-mono text-zinc-500 tracking-wide">{action.replace(/_/g, ' ')}</span>
+                            {isOverride && <span className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 bg-zinc-800/60 text-zinc-600">override</span>}
                           </div>
-
                           {isMe ? (
                             <span className="text-[10px] font-mono text-green-800">{effective ? 'granted' : 'denied'}</span>
                           ) : (
@@ -314,11 +236,8 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
                               className={cn(
                                 'flex items-center gap-1.5 px-3 py-1 text-[10px] font-mono tracking-widest uppercase border transition-colors disabled:opacity-50',
                                 override === null
-                                  ? effective
-                                    ? 'border-zinc-700 text-zinc-500 bg-zinc-800/30'
-                                    : 'border-zinc-800 text-zinc-700'
-                                  : override === true
-                                  ? 'border-green-800 text-green-700 bg-green-950/30'
+                                  ? effective ? 'border-zinc-700 text-zinc-500 bg-zinc-800/30' : 'border-zinc-800 text-zinc-700'
+                                  : override === true ? 'border-green-800 text-green-700 bg-green-950/30'
                                   : 'border-red-900 text-red-800 bg-red-950/20'
                               )}
                             >
@@ -340,11 +259,8 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
             )
           })}
         </div>
-
         <div className="px-5 py-3 border-t border-zinc-800/60">
-          <p className="text-[9px] font-mono text-zinc-700">
-            Bright green = explicit grant · Red = explicit deny · Muted = role default · Click to cycle states
-          </p>
+          <p className="text-[9px] font-mono text-zinc-700">Bright green = explicit grant · Red = explicit deny · Muted = role default · Click to cycle states</p>
         </div>
       </div>
     </div>
