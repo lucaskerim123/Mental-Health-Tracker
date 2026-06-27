@@ -7,7 +7,7 @@ import QuickSessionPanel from './QuickSessionPanel'
 
 export default async function MobileSessionPage() {
   const profile = await getProfile()
-  if (!profile) redirect('/login?next=/mobile/session')
+  if (!profile) redirect('/mobile/login?next=/mobile/session')
 
   const isAdmin = profile.role === 'admin'
   const supabase = await createClient()
