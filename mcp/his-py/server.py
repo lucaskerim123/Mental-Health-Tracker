@@ -1,19 +1,27 @@
 #!/usr/bin/env python3
 """
-HIS MCP Server — Python / FastMCP / HTTP
+HIS MCP Server — Python / FastMCP / stdio
 Health Incident System: substance/medication session tracker.
-Port 8001. No pause state — sessions are active or stopped.
+Runs as a stdio MCP server (for Claude Code).
+Set HIS_TRANSPORT=http to run as HTTP on HIS_MCP_PORT (default 8001) instead.
 
 Env vars required:
   SUPABASE_URL  (or NEXT_PUBLIC_SUPABASE_URL)
   SUPABASE_SERVICE_ROLE_KEY
   HIS_USER_ID
-  HIS_MCP_PORT  (optional, default 8001)
 """
 
 from __future__ import annotations
 
 import os
+
+# Load .env.local then .env so credentials work without exporting shell vars
+try:
+    from dotenv import load_dotenv
+    load_dotenv(".env.local", override=False)
+    load_dotenv(".env", override=False)
+except ImportError:
+    pass  # python-dotenv not installed; rely on environment variables
 import re
 import uuid
 from contextlib import asynccontextmanager
@@ -849,6 +857,10 @@ All timestamps display in Sydney time (AEST/AEDT).
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    port = int(os.environ.get("HIS_MCP_PORT", "8001"))
-    mcp.run(transport="streamable-http", port=port)
+    transport = os.environ.get("HIS_TRANSPORT", "stdio")
+    if transport == "http":
+        port = int(os.environ.get("HIS_MCP_PORT", "8001"))
+        mcp.run(transport="streamable-http", port=port)
+    else:
+        mcp.run(transport="stdio")
 
