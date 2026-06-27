@@ -29,6 +29,9 @@ export interface MentalHealthIncident {
   sensitive_fields: string[]
   personal_notes: string | null
   notes: string | null
+  names_involved: string | null
+  substance_use: 'no' | 'yes' | 'comedown' | null
+  emergency_services: boolean
   created_at: string
 }
 

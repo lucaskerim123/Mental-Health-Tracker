@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import Navbar from '@/components/layout/Navbar'
+import AppShell from '@/components/layout/AppShell'
 import IncidentDetail from './IncidentDetail'
 
 export default async function IncidentPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,11 +35,10 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar role={profile.role} displayName={profile.display_name} />
+    <AppShell role={profile.role} displayName={profile.display_name}>
       <main className="max-w-2xl mx-auto px-4 py-8">
         <IncidentDetail incident={safeIncident} isAdmin={isAdmin} canViewSensitive={canViewSensitive} />
       </main>
-    </div>
+    </AppShell>
   )
 }

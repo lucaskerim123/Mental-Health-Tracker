@@ -14,6 +14,9 @@ export default function NewIncidentForm() {
     description: '',
     personal_notes: '',
     notes: '',
+    names_involved: '',
+    substance_use: 'no' as 'no' | 'yes' | 'comedown',
+    emergency_services: false,
     is_sensitive: false,
   })
   const [sensitiveFields, setSensitiveFields] = useState<string[]>([])
@@ -52,79 +55,58 @@ export default function NewIncidentForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <Field label="Date & Time">
-        <input
-          type="datetime-local"
-          value={form.occurred_at}
-          onChange={e => set('occurred_at', e.target.value)}
-          className="vault-input"
-          required
-        />
+        <input type="datetime-local" value={form.occurred_at} onChange={e => set('occurred_at', e.target.value)} className="vault-input" required />
       </Field>
 
       <Field label={`Severity: ${form.severity}/10`}>
-        <input
-          type="range" min={1} max={10}
-          value={form.severity}
-          onChange={e => set('severity', Number(e.target.value))}
-          className="w-full accent-red-800"
-        />
+        <input type="range" min={1} max={10} value={form.severity} onChange={e => set('severity', Number(e.target.value))} className="w-full accent-red-800" />
         <div className="flex justify-between text-[10px] text-zinc-600 font-mono">
           <span>1 minimal</span><span>10 crisis</span>
         </div>
       </Field>
 
       <LockableField label="Description" field="description" isSensitive={isSensitive} toggle={toggleSensitiveField}>
-        <textarea
-          value={form.description}
-          onChange={e => set('description', e.target.value)}
-          rows={3}
-          className="vault-input resize-none"
-          required
-        />
+        <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={3} className="vault-input resize-none" required />
       </LockableField>
 
+      <Field label="Names Involved">
+        <input type="text" value={form.names_involved} onChange={e => set('names_involved', e.target.value)} placeholder="Who was present or involved..." className="vault-input" />
+      </Field>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Substance Use</label>
+          <select value={form.substance_use} onChange={e => set('substance_use', e.target.value)} className="vault-input">
+            <option value="no">No</option>
+            <option value="yes">Yes — Active use</option>
+            <option value="comedown">Comedown</option>
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Emergency Services</label>
+          <label className="flex items-center gap-3 h-10 cursor-pointer">
+            <input type="checkbox" checked={form.emergency_services} onChange={e => set('emergency_services', e.target.checked)} className="accent-red-800 w-4 h-4" />
+            <span className="text-sm font-mono text-zinc-400">Police / Paramedics called</span>
+          </label>
+        </div>
+      </div>
+
       <Field label="Personal Notes (always restricted to counsellors+)">
-        <textarea
-          value={form.personal_notes}
-          onChange={e => set('personal_notes', e.target.value)}
-          rows={4}
-          placeholder="Private reflections — visible to counsellors only"
-          className="vault-input resize-none"
-        />
+        <textarea value={form.personal_notes} onChange={e => set('personal_notes', e.target.value)} rows={4} placeholder="Private reflections — visible to counsellors only" className="vault-input resize-none" />
       </Field>
 
       <LockableField label="General Notes" field="notes" isSensitive={isSensitive} toggle={toggleSensitiveField}>
-        <textarea
-          value={form.notes}
-          onChange={e => set('notes', e.target.value)}
-          rows={3}
-          className="vault-input resize-none"
-        />
+        <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={3} className="vault-input resize-none" />
       </LockableField>
 
       <label className="flex items-center gap-3 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={form.is_sensitive}
-          onChange={e => set('is_sensitive', e.target.checked)}
-          className="accent-red-800 w-4 h-4"
-        />
+        <input type="checkbox" checked={form.is_sensitive} onChange={e => set('is_sensitive', e.target.checked)} className="accent-red-800 w-4 h-4" />
         <span className="text-[11px] font-mono text-zinc-500 tracking-wide">Mark entire entry as sensitive (hides from viewers)</span>
       </label>
 
       <div className="flex gap-3 pt-2">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="px-5 py-2.5 text-[11px] font-mono tracking-widest text-zinc-500 border border-zinc-800 hover:border-zinc-700 uppercase transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-5 py-2.5 text-[11px] font-mono tracking-widest text-red-200 bg-red-950 border border-red-900/60 hover:bg-red-900 uppercase transition-colors disabled:opacity-40"
-        >
+        <button type="button" onClick={() => router.back()} className="px-5 py-2.5 text-[11px] font-mono tracking-widest text-zinc-500 border border-zinc-800 hover:border-zinc-700 uppercase transition-colors">Cancel</button>
+        <button type="submit" disabled={saving} className="px-5 py-2.5 text-[11px] font-mono tracking-widest text-red-200 bg-red-950 border border-red-900/60 hover:bg-red-900 uppercase transition-colors disabled:opacity-40">
           {saving ? 'Saving...' : 'Record Incident'}
         </button>
       </div>
@@ -141,26 +123,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function LockableField({
-  label, field, isSensitive, toggle, children,
-}: {
-  label: string
-  field: string
-  isSensitive: (f: string) => boolean
-  toggle: (f: string) => void
-  children: React.ReactNode
+function LockableField({ label, field, isSensitive, toggle, children }: {
+  label: string; field: string; isSensitive: (f: string) => boolean; toggle: (f: string) => void; children: React.ReactNode
 }) {
   const locked = isSensitive(field)
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">{label}</label>
-        <button
-          type="button"
-          onClick={() => toggle(field)}
+        <button type="button" onClick={() => toggle(field)}
           title={locked ? 'Restricted to counsellors+ — click to unrestrict' : 'Click to restrict to counsellors+'}
-          className={`p-0.5 transition-colors ${locked ? 'text-red-700' : 'text-zinc-700 hover:text-zinc-500'}`}
-        >
+          className={`p-0.5 transition-colors ${locked ? 'text-red-700' : 'text-zinc-700 hover:text-zinc-500'}`}>
           <Lock className="w-3 h-3" />
         </button>
       </div>

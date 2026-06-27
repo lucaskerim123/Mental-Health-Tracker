@@ -52,15 +52,17 @@ export default function NewTrackerForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <Field label="Start Date">
+      <div className="space-y-1.5">
+        <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Start Date</label>
         <input type="date" value={form.date_start} onChange={e => set('date_start', e.target.value)} className="vault-input" required />
-      </Field>
+      </div>
       <LockableField label="Any Incidents" field="any_incidents" isSensitive={isSensitive} toggle={toggleSensitiveField}>
         <textarea value={form.any_incidents} onChange={e => set('any_incidents', e.target.value)} rows={3} className="vault-input resize-none" />
       </LockableField>
-      <Field label="Personal Reflection (always restricted to counsellors+)">
-        <textarea value={form.personal_reflection} onChange={e => set('personal_reflection', e.target.value)} rows={5} placeholder="e.g. Missing her so much but thinking it's time to move on..." className="vault-input resize-none" />
-      </Field>
+      <div className="space-y-1.5">
+        <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Personal Reflection (always restricted to counsellors+)</label>
+        <textarea value={form.personal_reflection} onChange={e => set('personal_reflection', e.target.value)} rows={5} placeholder="Private reflections — visible to counsellors only" className="vault-input resize-none" />
+      </div>
       <LockableField label="Notes" field="notes" isSensitive={isSensitive} toggle={toggleSensitiveField}>
         <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={3} className="vault-input resize-none" />
       </LockableField>
@@ -78,35 +80,17 @@ export default function NewTrackerForm() {
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">{label}</label>
-      {children}
-    </div>
-  )
-}
-
-function LockableField({
-  label, field, isSensitive, toggle, children,
-}: {
-  label: string
-  field: string
-  isSensitive: (f: string) => boolean
-  toggle: (f: string) => void
-  children: React.ReactNode
+function LockableField({ label, field, isSensitive, toggle, children }: {
+  label: string; field: string; isSensitive: (f: string) => boolean; toggle: (f: string) => void; children: React.ReactNode
 }) {
   const locked = isSensitive(field)
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">{label}</label>
-        <button
-          type="button"
-          onClick={() => toggle(field)}
+        <button type="button" onClick={() => toggle(field)}
           title={locked ? 'Restricted to counsellors+ — click to unrestrict' : 'Click to restrict to counsellors+'}
-          className={`p-0.5 transition-colors ${locked ? 'text-red-700' : 'text-zinc-700 hover:text-zinc-500'}`}
-        >
+          className={`p-0.5 transition-colors ${locked ? 'text-red-700' : 'text-zinc-700 hover:text-zinc-500'}`}>
           <Lock className="w-3 h-3" />
         </button>
       </div>

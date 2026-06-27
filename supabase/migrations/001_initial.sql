@@ -89,6 +89,7 @@ declare
   invite_record invites%rowtype;
   assigned_role user_role := 'viewer';
 begin
+  -- Look up invite token from metadata
   if new.raw_user_meta_data ? 'invite_token' then
     select * into invite_record
     from invites
@@ -108,6 +109,7 @@ begin
     assigned_role
   );
 
+  -- Mark invite as used
   if invite_record.id is not null then
     update invites set used_by = new.id where id = invite_record.id;
   end if;

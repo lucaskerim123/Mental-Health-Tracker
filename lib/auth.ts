@@ -28,9 +28,11 @@ export function can(
   resource: Resource,
   action: Action
 ): boolean {
+  // Check explicit override first
   const override = overrides.find(p => p.resource === resource && p.action === action)
   if (override) return override.granted
 
+  // Fall back to role defaults
   const rolePerms = ROLE_DEFAULTS[profile.role]
   return rolePerms[resource]?.includes(action) ?? false
 }

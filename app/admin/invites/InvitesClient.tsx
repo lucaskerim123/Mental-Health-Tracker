@@ -7,7 +7,10 @@ import { toast } from 'sonner'
 import { Copy, Trash2, Plus } from 'lucide-react'
 import type { Invite, Role } from '@/lib/supabase/types'
 
-interface Props { invites: Invite[]; adminId: string }
+interface Props {
+  invites: Invite[]
+  adminId: string
+}
 
 function generateToken(): string {
   const arr = new Uint8Array(32)
@@ -26,8 +29,11 @@ export default function InvitesClient({ invites: initialInvites, adminId }: Prop
     const token = generateToken()
     const expires_at = new Date(Date.now() + expiryDays * 86400000).toISOString()
     const supabase = createClient()
-    const { error, data } = await supabase.from('invites').insert({ token, created_by: adminId, role_to_assign: role, expires_at }).select().single()
-    if (error) { toast.error('Failed: ' + error.message) } else { setInvites(prev => [data, ...prev]); toast.success('Invite created.') }
+    const { error, data } = await supabase.from('invites').insert({
+      token, created_by: adminId, role_to_assign: role, expires_at,
+    }).select().single()
+    if (error) { toast.error('Failed: ' + error.message) }
+    else { setInvites(prev => [data, ...prev]); toast.success('Invite created.') }
     setCreating(false)
   }
 
@@ -67,7 +73,8 @@ export default function InvitesClient({ invites: initialInvites, adminId }: Prop
             </select>
           </div>
           <button onClick={createInvite} disabled={creating} className="flex items-center gap-2 mt-5 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-zinc-500 text-[11px] font-mono tracking-widest uppercase transition-colors disabled:opacity-40">
-            <Plus className="w-3 h-3" />{creating ? 'Creating...' : 'Generate Link'}
+            <Plus className="w-3 h-3" />
+            {creating ? 'Creating...' : 'Generate Link'}
           </button>
         </div>
       </div>

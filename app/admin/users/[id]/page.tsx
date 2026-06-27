@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import Navbar from '@/components/layout/Navbar'
+import AppShell from '@/components/layout/AppShell'
 import UserDetail from './UserDetail'
 import Link from 'next/link'
 
@@ -28,26 +28,15 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   if (!user) notFound()
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar role={profile.role} displayName={profile.display_name} />
+    <AppShell role={profile.role} displayName={profile.display_name}>
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-8">
-          <Link
-            href="/admin"
-            className="text-zinc-600 hover:text-zinc-400 text-[11px] font-mono tracking-widest uppercase transition-colors"
-          >
-            ← Admin
-          </Link>
+          <Link href="/admin" className="text-zinc-600 hover:text-zinc-400 text-[11px] font-mono tracking-widest uppercase transition-colors">← Admin</Link>
           <span className="text-zinc-700">/</span>
           <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase">User</h1>
         </div>
-        <UserDetail
-          user={user}
-          email={authData?.user?.email ?? ''}
-          permissions={permissions ?? []}
-          currentUserId={profile.id}
-        />
+        <UserDetail user={user} email={authData?.user?.email ?? ''} permissions={permissions ?? []} currentUserId={profile.id} />
       </main>
-    </div>
+    </AppShell>
   )
 }

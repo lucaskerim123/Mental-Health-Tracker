@@ -19,6 +19,7 @@ export default function IncidentDetail({ incident, isAdmin, canViewSensitive }: 
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(incident)
   const [sensitiveFields, setSensitiveFields] = useState<string[]>(incident.sensitive_fields ?? [])
+  const substanceColors = { no: 'text-zinc-500', yes: 'text-amber-600', comedown: 'text-orange-600' } as const
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -47,6 +48,9 @@ export default function IncidentDetail({ incident, isAdmin, canViewSensitive }: 
         description: form.description,
         personal_notes: form.personal_notes,
         notes: form.notes,
+        names_involved: form.names_involved,
+        substance_use: form.substance_use,
+        emergency_services: form.emergency_services,
         is_sensitive: form.is_sensitive,
         sensitive_fields: sensitiveFields,
       })
@@ -91,10 +95,18 @@ export default function IncidentDetail({ incident, isAdmin, canViewSensitive }: 
       </div>
 
       <div className="border border-zinc-800 bg-zinc-950 p-6 space-y-5">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center flex-wrap gap-2">
           <span className={`text-sm font-mono px-3 py-1 ${form.severity >= 7 ? 'text-red-700 bg-red-950/40 border border-red-900/40' : form.severity >= 4 ? 'text-amber-700 bg-amber-950/40 border border-amber-900/40' : 'text-zinc-500 bg-zinc-800 border border-zinc-700'}`}>
             SEV {form.severity}
           </span>
+          {form.substance_use && form.substance_use !== 'no' && (
+            <span className={`text-[10px] font-mono px-2 py-0.5 border border-amber-900/30 uppercase tracking-widest ${substanceColors[form.substance_use]}`}>
+              {form.substance_use === 'comedown' ? 'Comedown' : 'Substance Use'}
+            </span>
+          )}
+          {form.emergency_services && (
+            <span className="text-[10px] font-mono text-red-600 px-2 py-0.5 border border-red-900/40 uppercase tracking-widest">Emergency Services</span>
+          )}
           {form.is_sensitive && <span className="text-[9px] font-mono text-red-800 tracking-widest uppercase border border-red-900/30 px-2 py-0.5">Sensitive</span>}
         </div>
 
@@ -107,6 +119,26 @@ export default function IncidentDetail({ incident, isAdmin, canViewSensitive }: 
             <LockableField label="Description" field="description" isSensitive={isSensitive} toggle={toggleSensitiveField} showToggle={isAdmin}>
               <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={3} className="vault-input resize-none" />
             </LockableField>
+            <Field label="Names Involved">
+              <input type="text" value={form.names_involved ?? ''} onChange={e => set('names_involved', e.target.value)} placeholder="Who was present or involved..." className="vault-input" />
+            </Field>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Substance Use</label>
+                <select value={form.substance_use ?? 'no'} onChange={e => set('substance_use', e.target.value)} className="vault-input">
+                  <option value="no">No</option>
+                  <option value="yes">Yes — Active use</option>
+                  <option value="comedown">Comedown</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Emergency Services</label>
+                <label className="flex items-center gap-3 h-10 cursor-pointer">
+                  <input type="checkbox" checked={form.emergency_services} onChange={e => set('emergency_services', e.target.checked)} className="accent-red-800 w-4 h-4" />
+                  <span className="text-sm font-mono text-zinc-400">Police / Paramedics called</span>
+                </label>
+              </div>
+            </div>
             {canViewSensitive && (
               <Field label="Personal Notes (always restricted)">
                 <textarea value={form.personal_notes ?? ''} onChange={e => set('personal_notes', e.target.value)} rows={4} className="vault-input resize-none" />
@@ -123,6 +155,7 @@ export default function IncidentDetail({ incident, isAdmin, canViewSensitive }: 
         ) : (
           <>
             <ReadField label="Description" restricted={isSensitive('description')}>{form.description}</ReadField>
+            {form.names_involved && <ReadField label="Names Involved" restricted={false}>{form.names_involved}</ReadField>}
             {canViewSensitive && form.personal_notes && <ReadField label="Personal Notes" restricted={false}>{form.personal_notes}</ReadField>}
             {form.notes && <ReadField label="Notes" restricted={isSensitive('notes')}>{form.notes}</ReadField>}
           </>
@@ -141,15 +174,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function LockableField({
-  label, field, isSensitive, toggle, showToggle, children,
-}: {
-  label: string
-  field: string
-  isSensitive: (f: string) => boolean
-  toggle: (f: string) => void
-  showToggle: boolean
-  children: React.ReactNode
+function LockableField({ label, field, isSensitive, toggle, showToggle, children }: {
+  label: string; field: string; isSensitive: (f: string) => boolean; toggle: (f: string) => void; showToggle: boolean; children: React.ReactNode
 }) {
   const locked = isSensitive(field)
   return (
@@ -157,12 +183,9 @@ function LockableField({
       <div className="flex items-center justify-between">
         <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">{label}</label>
         {showToggle && (
-          <button
-            type="button"
-            onClick={() => toggle(field)}
+          <button type="button" onClick={() => toggle(field)}
             title={locked ? 'Restricted to counsellors+ — click to unrestrict' : 'Click to restrict to counsellors+'}
-            className={`p-0.5 transition-colors ${locked ? 'text-red-700' : 'text-zinc-700 hover:text-zinc-500'}`}
-          >
+            className={`p-0.5 transition-colors ${locked ? 'text-red-700' : 'text-zinc-700 hover:text-zinc-500'}`}>
             <Lock className="w-3 h-3" />
           </button>
         )}

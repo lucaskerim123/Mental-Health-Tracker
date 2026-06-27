@@ -34,11 +34,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: profileError.message }, { status: 400 })
   }
 
-  return NextResponse.json({
-    id: uid,
-    display_name,
-    role,
-    email,
-    created_at: new Date().toISOString(),
-  })
+  return NextResponse.json({ id: uid, display_name, role, email, created_at: new Date().toISOString() })
 }
