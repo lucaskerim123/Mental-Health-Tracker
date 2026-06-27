@@ -8,7 +8,7 @@ import { formatDateTime } from '@/lib/utils'
 export default async function MobileIncidentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const profile = await getProfile()
-  if (!profile) redirect('/login?next=/mobile/incidents')
+  if (!profile) redirect('/mobile/login?next=/mobile/incidents')
 
   const supabase = await createClient()
   const { data: incident } = await supabase.from('mental_health_incidents').select('*').eq('id', id).single()
