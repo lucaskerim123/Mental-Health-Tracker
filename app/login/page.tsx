@@ -15,6 +15,13 @@ export default function LoginPage() {
   const [inviteCode, setInviteCode] = useState('')
   const router = useRouter()
 
+  function getRedirectPath() {
+    const params = new URLSearchParams(window.location.search)
+    const next = params.get('next')
+    if (next && next.startsWith('/') && !next.startsWith('//')) return next
+    return '/dashboard'
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -26,7 +33,7 @@ export default function LoginPage() {
       setLoading(false)
       return
     }
-    router.push('/dashboard')
+    router.push(getRedirectPath())
     router.refresh()
   }
 
