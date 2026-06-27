@@ -62,6 +62,16 @@ export interface SleepLog {
   logged_at: string
 }
 
+export interface DrugUseLog {
+  id: string
+  session_id: string
+  substance: string
+  amount: number | null
+  unit: string | null
+  notes: string | null
+  logged_at: string
+}
+
 export interface Document {
   id: string
   uploaded_by: string
