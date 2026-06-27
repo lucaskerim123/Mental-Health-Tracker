@@ -7,7 +7,7 @@ import { daysUp, formatDate, formatDateTime } from '@/lib/utils'
 
 export default async function MobileHomePage() {
   const profile = await getProfile()
-  if (!profile) redirect('/login?next=/mobile')
+  if (!profile) redirect('/mobile/login?next=/mobile')
 
   const supabase = await createClient()
   const [{ data: activeSessions }, { data: recentIncidents }, { data: recentSessions }] = await Promise.all([
