@@ -1,14 +1,13 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Activity, ClipboardList, Plus, Shield, TimerReset } from 'lucide-react'
-import AppShell from '@/components/layout/AppShell'
+import { AlertTriangle, Clock3, FileText, Plus, TimerReset } from 'lucide-react'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { daysUp, formatDate, formatDateTime } from '@/lib/utils'
 
 export default async function MobileHomePage() {
   const profile = await getProfile()
-  if (!profile) redirect('/login')
+  if (!profile) redirect('/login?next=/mobile')
 
   const supabase = await createClient()
   const [{ data: activeSessions }, { data: recentIncidents }, { data: recentSessions }] = await Promise.all([
@@ -20,12 +19,12 @@ export default async function MobileHomePage() {
       .limit(1),
     supabase
       .from('mental_health_incidents')
-      .select('id, occurred_at, severity, description, is_sensitive')
+      .select('id, occurred_at, severity, description')
       .order('occurred_at', { ascending: false })
       .limit(3),
     supabase
       .from('drug_tracker_sessions')
-      .select('id, date_start, date_end, sleep_hours, any_incidents')
+      .select('id, date_start, date_end, sleep_hours')
       .order('date_start', { ascending: false })
       .limit(3),
   ])
@@ -34,90 +33,87 @@ export default async function MobileHomePage() {
   const isAdmin = profile.role === 'admin'
 
   return (
-    <AppShell role={profile.role} displayName={profile.display_name}>
-      <main className="mx-auto max-w-md px-4 py-5 pb-10">
-        <section className="mb-5 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-          <div className="flex items-center gap-2 text-zinc-400">
-            <Shield className="h-4 w-4 text-red-700" />
-            <p className="text-[10px] font-mono uppercase tracking-[0.28em]">Mental Health Tracker</p>
+    <main className="min-h-screen bg-black text-zinc-100">
+      <div className="mx-auto flex min-h-screen max-w-md flex-col px-4 pb-6 pt-5">
+        <header className="mb-5 rounded-[2rem] border border-zinc-800 bg-zinc-950 px-5 py-4 shadow-2xl shadow-black">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-[0.32em] text-zinc-600">Phone App</p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-100">Quick Entry</h1>
+            </div>
+            <div className="rounded-full border border-red-900/50 bg-red-950/20 px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-red-300">
+              Private
+            </div>
           </div>
-          <h1 className="mt-3 text-2xl font-mono font-semibold text-zinc-100">Today</h1>
-          <p className="mt-1 text-xs font-mono text-zinc-600">{formatDateTime(new Date().toISOString())}</p>
-        </section>
+          <p className="mt-3 text-xs font-mono text-zinc-600">{formatDateTime(new Date().toISOString())}</p>
+        </header>
 
-        <section className="mb-5 rounded-2xl border border-amber-900/40 bg-amber-950/10 p-4">
+        <section className="mb-4 rounded-[2rem] border border-amber-900/40 bg-gradient-to-br from-amber-950/30 to-zinc-950 px-5 py-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-amber-700">Session</p>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-amber-600">Current Session</p>
               {activeSession ? (
                 <>
-                  <p className="mt-2 text-lg font-mono text-zinc-100">Day {daysUp(activeSession.date_start)}</p>
-                  <p className="mt-1 text-xs font-mono text-zinc-500">Started {formatDate(activeSession.date_start)} · {activeSession.sleep_hours}h sleep</p>
+                  <p className="mt-2 text-5xl font-semibold tracking-tight text-zinc-100">Day {daysUp(activeSession.date_start)}</p>
+                  <p className="mt-2 text-xs font-mono text-zinc-500">Started {formatDate(activeSession.date_start)} · {activeSession.sleep_hours}h sleep</p>
                 </>
               ) : (
-                <p className="mt-2 text-sm font-mono text-zinc-500">No active session.</p>
+                <>
+                  <p className="mt-2 text-2xl font-semibold text-zinc-100">No active session</p>
+                  <p className="mt-2 text-xs font-mono text-zinc-600">Start one when you need tracking on.</p>
+                </>
               )}
             </div>
-            <TimerReset className="mt-1 h-5 w-5 text-amber-800" />
+            <TimerReset className="mt-1 h-6 w-6 text-amber-700" />
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {activeSession ? (
-              <Link href={`/tracker/${activeSession.id}`} className="rounded-xl border border-amber-900/50 px-3 py-3 text-center text-[11px] font-mono uppercase tracking-widest text-amber-300">
-                Open Session
-              </Link>
-            ) : isAdmin ? (
-              <Link href="/tracker/new" className="rounded-xl border border-amber-900/50 px-3 py-3 text-center text-[11px] font-mono uppercase tracking-widest text-amber-300">
-                Start Session
-              </Link>
-            ) : (
-              <Link href="/tracker" className="rounded-xl border border-zinc-800 px-3 py-3 text-center text-[11px] font-mono uppercase tracking-widest text-zinc-500">
-                Sessions
-              </Link>
-            )}
-            <Link href="/tracker" className="rounded-xl border border-zinc-800 px-3 py-3 text-center text-[11px] font-mono uppercase tracking-widest text-zinc-400">
-              History
+        </section>
+
+        <section className="mb-5 grid grid-cols-1 gap-3">
+          {isAdmin && (
+            <Link href="/mobile/incident" className="flex items-center justify-between rounded-[1.75rem] border border-red-900/50 bg-red-950/20 px-5 py-5 active:scale-[0.99]">
+              <div>
+                <p className="text-xl font-semibold text-zinc-100">Add Incident</p>
+                <p className="mt-1 text-xs font-mono text-red-300/70">Fast log · severity · notes</p>
+              </div>
+              <Plus className="h-7 w-7 text-red-500" />
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link href="/mobile/session" className="flex items-center justify-between rounded-[1.75rem] border border-amber-900/50 bg-amber-950/20 px-5 py-5 active:scale-[0.99]">
+              <div>
+                <p className="text-xl font-semibold text-zinc-100">Session Tracker</p>
+                <p className="mt-1 text-xs font-mono text-amber-300/70">Start · sleep · notes · close</p>
+              </div>
+              <Clock3 className="h-7 w-7 text-amber-500" />
+            </Link>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <Link href="/incidents" className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950 px-4 py-4 active:scale-[0.99]">
+              <AlertTriangle className="mb-3 h-5 w-5 text-zinc-500" />
+              <p className="text-sm font-semibold text-zinc-200">Incidents</p>
+              <p className="mt-1 text-[10px] font-mono text-zinc-600">Full list</p>
+            </Link>
+            <Link href="/tracker" className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950 px-4 py-4 active:scale-[0.99]">
+              <FileText className="mb-3 h-5 w-5 text-zinc-500" />
+              <p className="text-sm font-semibold text-zinc-200">History</p>
+              <p className="mt-1 text-[10px] font-mono text-zinc-600">Sessions</p>
             </Link>
           </div>
         </section>
 
-        <section className="mb-5 grid grid-cols-2 gap-3">
-          {isAdmin && (
-            <Link href="/incidents/new" className="rounded-2xl border border-red-900/50 bg-red-950/10 p-4">
-              <Plus className="mb-3 h-5 w-5 text-red-700" />
-              <p className="text-sm font-mono text-zinc-100">Add Incident</p>
-              <p className="mt-1 text-[10px] font-mono text-zinc-600">Entry + details</p>
-            </Link>
-          )}
-          {isAdmin && (
-            <Link href="/tracker/new" className="rounded-2xl border border-amber-900/50 bg-amber-950/10 p-4">
-              <Plus className="mb-3 h-5 w-5 text-amber-700" />
-              <p className="text-sm font-mono text-zinc-100">New Session</p>
-              <p className="mt-1 text-[10px] font-mono text-zinc-600">Start tracker</p>
-            </Link>
-          )}
-          <Link href="/incidents" className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-            <Activity className="mb-3 h-5 w-5 text-zinc-500" />
-            <p className="text-sm font-mono text-zinc-100">Incidents</p>
-            <p className="mt-1 text-[10px] font-mono text-zinc-600">View entries</p>
-          </Link>
-          <Link href="/tracker" className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-            <ClipboardList className="mb-3 h-5 w-5 text-zinc-500" />
-            <p className="text-sm font-mono text-zinc-100">Sessions</p>
-            <p className="mt-1 text-[10px] font-mono text-zinc-600">Sleep + notes</p>
-          </Link>
-        </section>
-
-        <section className="mb-5 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+        <section className="mb-4 rounded-[1.75rem] border border-zinc-800 bg-zinc-950 px-4 py-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Recent Incidents</p>
+            <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Recent incidents</p>
             <Link href="/incidents" className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">All</Link>
           </div>
           <div className="space-y-2">
             {recentIncidents?.length ? recentIncidents.map(incident => (
-              <Link key={incident.id} href={`/incidents/${incident.id}`} className="block rounded-xl border border-zinc-800 px-3 py-3">
+              <Link key={incident.id} href={`/incidents/${incident.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-mono text-zinc-500">{formatDate(incident.occurred_at)}</span>
-                  <span className="rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] font-mono text-zinc-400">SEV {incident.severity}</span>
+                  <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] font-mono text-zinc-400">SEV {incident.severity}</span>
                 </div>
                 <p className="mt-1 truncate text-xs font-mono text-zinc-400">{incident.description}</p>
               </Link>
@@ -127,17 +123,17 @@ export default async function MobileHomePage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+        <section className="rounded-[1.75rem] border border-zinc-800 bg-zinc-950 px-4 py-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Recent Sessions</p>
+            <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Recent sessions</p>
             <Link href="/tracker" className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">All</Link>
           </div>
           <div className="space-y-2">
             {recentSessions?.length ? recentSessions.map(session => (
-              <Link key={session.id} href={`/tracker/${session.id}`} className="block rounded-xl border border-zinc-800 px-3 py-3">
+              <Link key={session.id} href={`/tracker/${session.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-mono text-zinc-500">{formatDate(session.date_start)}</span>
-                  <span className="rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] font-mono text-zinc-400">{session.date_end ? 'Closed' : 'Open'}</span>
+                  <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] font-mono text-zinc-400">{session.date_end ? 'Closed' : 'Open'}</span>
                 </div>
                 <p className="mt-1 text-xs font-mono text-zinc-400">{session.sleep_hours}h sleep · Day {daysUp(session.date_start, session.date_end)}</p>
               </Link>
@@ -146,7 +142,7 @@ export default async function MobileHomePage() {
             )}
           </div>
         </section>
-      </main>
-    </AppShell>
+      </div>
+    </main>
   )
 }
