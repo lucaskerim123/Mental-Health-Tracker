@@ -14,7 +14,6 @@ export default async function LockdownPage() {
       siteName={cfg.site_name ?? 'Mental Health Tracker'}
       message={cfg.lockdown_message ?? 'This site is temporarily unavailable.'}
     />
-  const cfg = Object.fromEntries((rows ?? []).map(r => [r.key, r.value]))
   const siteName = cfg.site_name ?? 'Mental Health Tracker'
   const message = cfg.lockdown_message ?? 'This site is temporarily unavailable.'
 
