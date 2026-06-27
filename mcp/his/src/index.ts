@@ -1,35 +1,45 @@
 #!/usr/bin/env node
 
+import { randomUUID } from 'node:crypto'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 
-const HOLD_NAME = 'mental-health-incident-system'
-const VERSION = '0.1.0'
+const SERVER_NAME = 'mental-health-incident-system'
+const VERSION = '0.2.0'
+const SESSION_TABLE = 'drug_tracker_session'
 
-type HisSession = {
+type DrugTrackerSession = {
   id: string
-  status: 'active' | 'paused' | 'stopped'
-  started_at: string
-  paused_at: string | null
-  stopped_at: string | null
-  total_paused_ms: number
-  mood_marker: string | null
-  source: string
-  metadata: Record<string, unknown>
-  created_at: string
-  updated_at: string
+  user_id: string
+  date_start: string
+  date_end: string | null
+  sleep_hours: number | null
+  any_incidents: string | null
+  personal_reflection: string | null
+  notes: string | null
+  is_sensitive: boolean | null
+  created_at: string | null
+  sensitive_fields: unknown
 }
 
-type HisEntry = {
-  id: string
-  session_id: string
-  entry_type: 'start' | 'resume' | 'pause' | 'stop' | 'note' | 'mood' | 'tag' | 'info'
-  body: string | null
-  mood: string | null
-  occurred_at: string
-  created_at: string
+type HisEventType = 'START' | 'RESUME' | 'PAUSE' | 'STOP' | 'NOTE' | 'MOOD'
+
+type HisEvent = {
+  type: HisEventType
+  at: string
+  text: string
+}
+
+function getRequiredEnv(name: string) {
+  const value = process.env[name]
+
+  if (!value || !value.trim()) {
+    throw new Error(`Missing ${name}`)
+  }
+
+  return value
 }
 
 function getSupabase() {
@@ -53,11 +63,23 @@ function getSupabase() {
 }
 
 const supabase = getSupabase()
+const hisUserId = getRequiredEnv('HIS_USER_ID')
 
 const server = new McpServer({
-  name: HOLD_NAME,
+  name: SERVER_NAME,
   version: VERSION,
 })
+
+function text(content: string) {
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: content,
+      },
+    ],
+  }
+}
 
 function nowIso() {
   return new Date().toISOString()
@@ -69,24 +91,25 @@ function parseOptionalDatetime(datetime?: string) {
   const parsed = new Date(datetime)
 
   if (Number.isNaN(parsed.getTime())) {
-    throw new Error(`Invalid datetime: ${datetime}. Use ISO format or have the assistant convert natural language to ISO first.`)
+    throw new Error(`Invalid datetime: ${datetime}. Use ISO format, e.g. 2026-06-27T21:30:00+10:00.`)
   }
 
   return parsed.toISOString()
 }
 
-function msToHuman(ms: number) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000))
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
-
-  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`
-  if (minutes > 0) return `${minutes}m ${seconds}s`
-  return `${seconds}s`
+function isoToDateOnly(iso: string) {
+  return iso.slice(0, 10)
 }
 
-function formatSydney(iso: string | null) {
+function dateOnlyToIso(date: string | null | undefined) {
+  if (!date) return null
+
+  if (date.includes('T')) return new Date(date).toISOString()
+
+  return new Date(`${date}T00:00:00.000Z`).toISOString()
+}
+
+function formatSydney(iso: string | null | undefined) {
   if (!iso) return 'none'
 
   return new Intl.DateTimeFormat('en-AU', {
@@ -101,164 +124,266 @@ function formatSydney(iso: string | null) {
   }).format(new Date(iso))
 }
 
-function activeDurationMs(session: HisSession) {
-  const start = Date.parse(session.started_at)
-  const end =
-    session.status === 'paused' && session.paused_at
-      ? Date.parse(session.paused_at)
-      : session.stopped_at
-        ? Date.parse(session.stopped_at)
-        : Date.now()
+function msToHuman(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000))
+  const days = Math.floor(totalSeconds / 86400)
+  const hours = Math.floor((totalSeconds % 86400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
 
-  return Math.max(0, end - start - Number(session.total_paused_ms ?? 0))
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`
+  if (minutes > 0) return `${minutes}m ${seconds}s`
+  return `${seconds}s`
+}
+
+function makeHisLine(type: HisEventType, at: string, body?: string) {
+  const safeBody = (body ?? '').replace(/\r?\n/g, ' ').trim()
+  return safeBody ? `[HIS:${type}] ${at} :: ${safeBody}` : `[HIS:${type}] ${at}`
+}
+
+function appendHisLine(notes: string | null | undefined, type: HisEventType, at: string, body?: string) {
+  const existing = (notes ?? '').trimEnd()
+  const line = makeHisLine(type, at, body)
+
+  return existing ? `${existing}\n${line}` : line
+}
+
+function parseHisEvents(notes: string | null | undefined): HisEvent[] {
+  const events: HisEvent[] = []
+  const source = notes ?? ''
+  const pattern = /^\[HIS:(START|RESUME|PAUSE|STOP|NOTE|MOOD)\]\s+([^:\n]+(?::[^:\n]+)*)(?:\s+::\s*(.*))?$/gm
+
+  for (const match of source.matchAll(pattern)) {
+    const type = match[1] as HisEventType
+    const atRaw = (match[2] ?? '').trim()
+    const parsed = new Date(atRaw)
+
+    if (Number.isNaN(parsed.getTime())) continue
+
+    events.push({
+      type,
+      at: parsed.toISOString(),
+      text: (match[3] ?? '').trim(),
+    })
+  }
+
+  return events
+}
+
+function getStartIso(session: DrugTrackerSession, events = parseHisEvents(session.notes)) {
+  const startEvent = events.find((event) => event.type === 'START')
+
+  return (
+    startEvent?.at ??
+    (session.created_at ? new Date(session.created_at).toISOString() : null) ??
+    dateOnlyToIso(session.date_start) ??
+    nowIso()
+  )
+}
+
+function getLastStatus(session: DrugTrackerSession, events = parseHisEvents(session.notes)) {
+  const statusEvents = events.filter((event) =>
+    ['START', 'RESUME', 'PAUSE', 'STOP'].includes(event.type),
+  )
+
+  const last = statusEvents.at(-1)
+
+  if (session.date_end || last?.type === 'STOP') return 'stopped'
+  if (last?.type === 'PAUSE') return 'paused'
+  return 'active'
+}
+
+function getLastMood(events: HisEvent[]) {
+  return events.filter((event) => event.type === 'MOOD').at(-1)?.text ?? 'none'
+}
+
+function activeDurationMs(session: DrugTrackerSession) {
+  const events = parseHisEvents(session.notes)
+  const startIso = getStartIso(session, events)
+  const status = getLastStatus(session, events)
+
+  let endMs = Date.now()
+
+  const stopEvent = events.filter((event) => event.type === 'STOP').at(-1)
+  const pauseEvent = events.filter((event) => event.type === 'PAUSE').at(-1)
+
+  if (status === 'stopped') {
+    endMs = stopEvent ? Date.parse(stopEvent.at) : Date.parse(dateOnlyToIso(session.date_end) ?? nowIso())
+  } else if (status === 'paused' && pauseEvent) {
+    endMs = Date.parse(pauseEvent.at)
+  }
+
+  let pausedMs = 0
+  let openPauseAt: number | null = null
+
+  for (const event of events) {
+    if (event.type === 'PAUSE') {
+      openPauseAt = Date.parse(event.at)
+    }
+
+    if (event.type === 'RESUME' && openPauseAt !== null) {
+      pausedMs += Math.max(0, Date.parse(event.at) - openPauseAt)
+      openPauseAt = null
+    }
+
+    if (event.type === 'STOP' && openPauseAt !== null) {
+      pausedMs += Math.max(0, Date.parse(event.at) - openPauseAt)
+      openPauseAt = null
+    }
+  }
+
+  return Math.max(0, endMs - Date.parse(startIso) - pausedMs)
 }
 
 async function getCurrentSession() {
   const { data, error } = await supabase
-    .from('his_sessions')
+    .from(SESSION_TABLE)
     .select('*')
-    .in('status', ['active', 'paused'])
-    .order('started_at', { ascending: false })
+    .eq('user_id', hisUserId)
+    .is('date_end', null)
+    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
   if (error) throw error
 
-  return data as HisSession | null
+  return data as DrugTrackerSession | null
 }
 
-async function countEntries(sessionId: string) {
-  const { count, error } = await supabase
-    .from('his_entries')
-    .select('*', { count: 'exact', head: true })
-    .eq('session_id', sessionId)
+async function getLatestSession() {
+  const { data, error } = await supabase
+    .from(SESSION_TABLE)
+    .select('*')
+    .eq('user_id', hisUserId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (error) throw error
 
-  return count ?? 0
+  return data as DrugTrackerSession | null
 }
 
-async function addEntry(params: {
-  sessionId: string
-  entryType: HisEntry['entry_type']
-  body?: string
-  mood?: string
-  occurredAt?: string
-}) {
-  const { error } = await supabase.from('his_entries').insert({
-    session_id: params.sessionId,
-    entry_type: params.entryType,
-    body: params.body ?? null,
-    mood: params.mood ?? null,
-    occurred_at: params.occurredAt ?? nowIso(),
-  })
+async function appendToSession(session: DrugTrackerSession, type: HisEventType, body?: string, at = nowIso()) {
+  const nextNotes = appendHisLine(session.notes, type, at, body)
+
+  const { data, error } = await supabase
+    .from(SESSION_TABLE)
+    .update({
+      notes: nextNotes,
+    })
+    .eq('id', session.id)
+    .select('*')
+    .single()
 
   if (error) throw error
+
+  return data as DrugTrackerSession
 }
 
-function text(content: string) {
-  return {
-    content: [
-      {
-        type: 'text' as const,
-        text: content,
-      },
-    ],
-  }
+async function stopSession(session: DrugTrackerSession, at = nowIso()) {
+  const nextNotes = appendHisLine(session.notes, 'STOP', at, 'Session stopped.')
+
+  const { data, error } = await supabase
+    .from(SESSION_TABLE)
+    .update({
+      date_end: isoToDateOnly(at),
+      notes: nextNotes,
+    })
+    .eq('id', session.id)
+    .select('*')
+    .single()
+
+  if (error) throw error
+
+  return data as DrugTrackerSession
+}
+
+function countHisEntries(session: DrugTrackerSession) {
+  return parseHisEvents(session.notes).length
+}
+
+function eventSummary(session: DrugTrackerSession, limit = 5) {
+  const events = parseHisEvents(session.notes).slice(-limit).reverse()
+
+  if (!events.length) return '- none'
+
+  return events
+    .map((event) => `- ${formatSydney(event.at)} [${event.type.toLowerCase()}] ${event.text}`)
+    .join('\n')
 }
 
 server.registerTool(
   'his_seshstart',
   {
     description:
-      'Start a HIS incident/session. If a session is paused, this resumes it. This maps to /his-seshstart with optional datetime.',
+      'Start a Mental Health Incident System tracker session in drug_tracker_session. If current session is paused, resume it. Maps to /his-seshstart [optional datetime].',
     inputSchema: {
       datetime: z
         .string()
         .optional()
-        .describe('Optional ISO datetime. Leave blank to use now. If user gives natural language, convert to ISO before calling.'),
+        .describe('Optional ISO datetime. Leave blank to use now.'),
     },
   },
   async ({ datetime }) => {
-    const existing = await getCurrentSession()
     const eventTime = parseOptionalDatetime(datetime)
+    const existing = await getCurrentSession()
 
-    if (existing?.status === 'active') {
-      return text(
-        [
-          'HIS session already active.',
-          `Started: ${formatSydney(existing.started_at)}`,
-          `Duration: ${msToHuman(activeDurationMs(existing))}`,
-          `Mood: ${existing.mood_marker ?? 'none'}`,
-        ].join('\n'),
-      )
-    }
+    if (existing) {
+      const status = getLastStatus(existing)
 
-    if (existing?.status === 'paused') {
-      const pausedAt = existing.paused_at ? Date.parse(existing.paused_at) : Date.now()
-      const resumedAt = Date.parse(eventTime)
-      const addedPausedMs = Math.max(0, resumedAt - pausedAt)
-      const totalPausedMs = Number(existing.total_paused_ms ?? 0) + addedPausedMs
+      if (status === 'active') {
+        return text(
+          [
+            'HIS tracker session already active.',
+            `Session ID: ${existing.id}`,
+            `Started: ${formatSydney(getStartIso(existing))}`,
+            `Duration: ${msToHuman(activeDurationMs(existing))}`,
+            `Entries: ${countHisEntries(existing)}`,
+          ].join('\n'),
+        )
+      }
 
-      const { data, error } = await supabase
-        .from('his_sessions')
-        .update({
-          status: 'active',
-          paused_at: null,
-          total_paused_ms: totalPausedMs,
-          updated_at: eventTime,
-        })
-        .eq('id', existing.id)
-        .select('*')
-        .single()
-
-      if (error) throw error
-
-      await addEntry({
-        sessionId: existing.id,
-        entryType: 'resume',
-        body: 'Session resumed.',
-        occurredAt: eventTime,
-      })
-
-      const session = data as HisSession
+      const resumed = await appendToSession(existing, 'RESUME', 'Session resumed.', eventTime)
 
       return text(
         [
-          'HIS session resumed.',
-          `Started: ${formatSydney(session.started_at)}`,
+          'HIS tracker session resumed.',
+          `Session ID: ${resumed.id}`,
+          `Started: ${formatSydney(getStartIso(resumed))}`,
           `Resumed: ${formatSydney(eventTime)}`,
-          `Duration: ${msToHuman(activeDurationMs(session))}`,
+          `Duration: ${msToHuman(activeDurationMs(resumed))}`,
         ].join('\n'),
       )
     }
+
+    const startNotes = makeHisLine('START', eventTime, 'Session started.')
 
     const { data, error } = await supabase
-      .from('his_sessions')
+      .from(SESSION_TABLE)
       .insert({
-        status: 'active',
-        started_at: eventTime,
-        source: 'mcp',
+        id: randomUUID(),
+        user_id: hisUserId,
+        date_start: isoToDateOnly(eventTime),
+        sleep_hours: 0,
+        any_incidents: '',
+        personal_reflection: '',
+        notes: startNotes,
+        is_sensitive: false,
       })
       .select('*')
       .single()
 
     if (error) throw error
 
-    const session = data as HisSession
-
-    await addEntry({
-      sessionId: session.id,
-      entryType: 'start',
-      body: 'Session started.',
-      occurredAt: eventTime,
-    })
+    const session = data as DrugTrackerSession
 
     return text(
       [
-        'HIS session started.',
+        'HIS tracker session started.',
         `Session ID: ${session.id}`,
-        `Started: ${formatSydney(session.started_at)}`,
+        `Started: ${formatSydney(eventTime)}`,
         'Status: active',
       ].join('\n'),
     )
@@ -269,83 +394,44 @@ server.registerTool(
   'his_seshstop',
   {
     description:
-      'Pause or stop the current HIS session. First run pauses an active session. Running again while paused stops it. Maps to /his-seshstop.',
+      'Pause or stop the current tracker session. First run pauses. Running again while paused stops and sets date_end. Maps to /his-seshstop.',
     inputSchema: {},
   },
   async () => {
     const session = await getCurrentSession()
 
     if (!session) {
-      return text('No active or paused HIS session found.')
+      return text('No active or paused HIS tracker session found.')
     }
 
     const eventTime = nowIso()
+    const status = getLastStatus(session)
 
-    if (session.status === 'active') {
-      const { data, error } = await supabase
-        .from('his_sessions')
-        .update({
-          status: 'paused',
-          paused_at: eventTime,
-          updated_at: eventTime,
-        })
-        .eq('id', session.id)
-        .select('*')
-        .single()
-
-      if (error) throw error
-
-      await addEntry({
-        sessionId: session.id,
-        entryType: 'pause',
-        body: 'Session paused.',
-        occurredAt: eventTime,
-      })
-
-      const paused = data as HisSession
+    if (status === 'active') {
+      const paused = await appendToSession(session, 'PAUSE', 'Session paused.', eventTime)
 
       return text(
         [
-          'HIS session paused.',
-          `Started: ${formatSydney(paused.started_at)}`,
-          `Paused: ${formatSydney(paused.paused_at)}`,
+          'HIS tracker session paused.',
+          `Session ID: ${paused.id}`,
+          `Started: ${formatSydney(getStartIso(paused))}`,
+          `Paused: ${formatSydney(eventTime)}`,
           `Tracked duration: ${msToHuman(activeDurationMs(paused))}`,
           'Run /his-seshstart to resume, or /his-seshstop again to stop.',
         ].join('\n'),
       )
     }
 
-    const { data, error } = await supabase
-      .from('his_sessions')
-      .update({
-        status: 'stopped',
-        stopped_at: eventTime,
-        updated_at: eventTime,
-      })
-      .eq('id', session.id)
-      .select('*')
-      .single()
-
-    if (error) throw error
-
-    await addEntry({
-      sessionId: session.id,
-      entryType: 'stop',
-      body: 'Session stopped.',
-      occurredAt: eventTime,
-    })
-
-    const stopped = data as HisSession
-    const entries = await countEntries(stopped.id)
+    const stopped = await stopSession(session, eventTime)
 
     return text(
       [
-        'HIS session stopped.',
-        `Started: ${formatSydney(stopped.started_at)}`,
-        `Stopped: ${formatSydney(stopped.stopped_at)}`,
+        'HIS tracker session stopped.',
+        `Session ID: ${stopped.id}`,
+        `Started: ${formatSydney(getStartIso(stopped))}`,
+        `Stopped: ${formatSydney(eventTime)}`,
         `Tracked duration: ${msToHuman(activeDurationMs(stopped))}`,
-        `Entries: ${entries}`,
-        `Mood: ${stopped.mood_marker ?? 'none'}`,
+        `Entries: ${countHisEntries(stopped)}`,
       ].join('\n'),
     )
   },
@@ -354,29 +440,25 @@ server.registerTool(
 server.registerTool(
   'his_note',
   {
-    description: 'Add a mid-session note/log entry. Maps to /his-note [text].',
+    description: 'Add a note to the current drug_tracker_session notes field. Maps to /his-note [text].',
     inputSchema: {
-      text: z.string().min(1).describe('The note/log text to attach to the current session.'),
+      text: z.string().min(1).describe('The note text to attach to the current tracker session.'),
     },
   },
   async ({ text: body }) => {
     const session = await getCurrentSession()
 
     if (!session) {
-      return text('No active or paused HIS session found. Run /his-seshstart first.')
+      return text('No active or paused HIS tracker session found. Run /his-seshstart first.')
     }
 
-    await addEntry({
-      sessionId: session.id,
-      entryType: 'note',
-      body,
-    })
+    const updated = await appendToSession(session, 'NOTE', body)
 
     return text(
       [
         'HIS note added.',
-        `Session: ${session.id}`,
-        `Status: ${session.status}`,
+        `Session ID: ${updated.id}`,
+        `Status: ${getLastStatus(updated)}`,
         `Note: ${body}`,
       ].join('\n'),
     )
@@ -386,7 +468,7 @@ server.registerTool(
 server.registerTool(
   'his_mood',
   {
-    description: 'Add/update quick mood words during the current session. Maps to /his-mood [words].',
+    description: 'Add a quick mood marker to the current drug_tracker_session notes field. Maps to /his-mood [words].',
     inputSchema: {
       words: z.string().min(1).describe('Mood words/tags, e.g. angry, numb, wired, anxious, flat.'),
     },
@@ -395,33 +477,15 @@ server.registerTool(
     const session = await getCurrentSession()
 
     if (!session) {
-      return text('No active or paused HIS session found. Run /his-seshstart first.')
+      return text('No active or paused HIS tracker session found. Run /his-seshstart first.')
     }
 
-    const eventTime = nowIso()
-
-    const { error } = await supabase
-      .from('his_sessions')
-      .update({
-        mood_marker: words,
-        updated_at: eventTime,
-      })
-      .eq('id', session.id)
-
-    if (error) throw error
-
-    await addEntry({
-      sessionId: session.id,
-      entryType: 'mood',
-      body: `Mood marker: ${words}`,
-      mood: words,
-      occurredAt: eventTime,
-    })
+    const updated = await appendToSession(session, 'MOOD', words)
 
     return text(
       [
-        'HIS mood updated.',
-        `Session: ${session.id}`,
+        'HIS mood added.',
+        `Session ID: ${updated.id}`,
         `Mood: ${words}`,
       ].join('\n'),
     )
@@ -431,46 +495,32 @@ server.registerTool(
 server.registerTool(
   'his_info',
   {
-    description: 'Show current HIS session state. Maps to /his-info.',
+    description: 'Show current HIS tracker session state. Maps to /his-info.',
     inputSchema: {},
   },
   async () => {
     const session = await getCurrentSession()
 
     if (!session) {
-      return text('No active or paused HIS session found.')
+      return text('No active or paused HIS tracker session found.')
     }
 
-    const entries = await countEntries(session.id)
-
-    const { data, error } = await supabase
-      .from('his_entries')
-      .select('*')
-      .eq('session_id', session.id)
-      .order('occurred_at', { ascending: false })
-      .limit(5)
-
-    if (error) throw error
-
-    const recent = (data ?? []) as HisEntry[]
+    const events = parseHisEvents(session.notes)
 
     return text(
       [
-        'Current HIS session:',
+        'Current HIS tracker session:',
         `Session ID: ${session.id}`,
-        `Status: ${session.status}`,
-        `Started: ${formatSydney(session.started_at)}`,
-        `Paused: ${formatSydney(session.paused_at)}`,
+        `Status: ${getLastStatus(session, events)}`,
+        `Started: ${formatSydney(getStartIso(session, events))}`,
+        `Date start: ${session.date_start}`,
+        `Date end: ${session.date_end ?? 'none'}`,
         `Tracked duration: ${msToHuman(activeDurationMs(session))}`,
-        `Entries so far: ${entries}`,
-        `Mood: ${session.mood_marker ?? 'none'}`,
+        `Entries so far: ${events.length}`,
+        `Mood: ${getLastMood(events)}`,
         '',
         'Recent entries:',
-        recent.length
-          ? recent
-              .map((entry) => `- ${formatSydney(entry.occurred_at)} [${entry.entry_type}] ${entry.mood ?? entry.body ?? ''}`)
-              .join('\n')
-          : '- none',
+        eventSummary(session, 5),
       ].join('\n'),
     )
   },
@@ -479,38 +529,41 @@ server.registerTool(
 server.registerTool(
   'his_list',
   {
-    description: 'List recent HIS sessions. Maps to /his-list.',
+    description: 'List recent drug_tracker_session rows for the configured HIS_USER_ID. Maps to /his-list.',
     inputSchema: {
       limit: z.number().int().min(1).max(20).optional().describe('Number of sessions to return. Default 5.'),
     },
   },
   async ({ limit }) => {
     const { data, error } = await supabase
-      .from('his_sessions')
+      .from(SESSION_TABLE)
       .select('*')
-      .order('started_at', { ascending: false })
+      .eq('user_id', hisUserId)
+      .order('created_at', { ascending: false })
       .limit(limit ?? 5)
 
     if (error) throw error
 
-    const sessions = (data ?? []) as HisSession[]
+    const sessions = (data ?? []) as DrugTrackerSession[]
 
     if (!sessions.length) {
-      return text('No HIS sessions found.')
+      return text('No drug tracker sessions found for HIS_USER_ID.')
     }
 
     return text(
       [
-        'Recent HIS sessions:',
-        ...sessions.map((session) =>
-          [
-            `- ${formatSydney(session.started_at)}`,
-            `status=${session.status}`,
+        'Recent HIS tracker sessions:',
+        ...sessions.map((session) => {
+          const events = parseHisEvents(session.notes)
+
+          return [
+            `- ${formatSydney(getStartIso(session, events))}`,
+            `status=${getLastStatus(session, events)}`,
             `duration=${msToHuman(activeDurationMs(session))}`,
-            `mood=${session.mood_marker ?? 'none'}`,
+            `mood=${getLastMood(events)}`,
             `id=${session.id}`,
-          ].join(' | '),
-        ),
+          ].join(' | ')
+        }),
       ].join('\n'),
     )
   },
@@ -519,78 +572,96 @@ server.registerTool(
 server.registerTool(
   'his_export',
   {
-    description: 'Export one session as a plain text timeline. Useful for review/reporting. Optional extra command.',
+    description: 'Export one drug_tracker_session as a plain text timeline. Optional session_id. Maps to /his-export.',
     inputSchema: {
       session_id: z.string().uuid().optional().describe('Session UUID. If blank, exports current active/paused session or latest session.'),
     },
   },
   async ({ session_id }) => {
-    let session: HisSession | null = null
+    let session: DrugTrackerSession | null = null
 
     if (session_id) {
       const { data, error } = await supabase
-        .from('his_sessions')
+        .from(SESSION_TABLE)
         .select('*')
         .eq('id', session_id)
         .maybeSingle()
 
       if (error) throw error
-      session = data as HisSession | null
+      session = data as DrugTrackerSession | null
     } else {
-      session = await getCurrentSession()
-
-      if (!session) {
-        const { data, error } = await supabase
-          .from('his_sessions')
-          .select('*')
-          .order('started_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-
-        if (error) throw error
-        session = data as HisSession | null
-      }
+      session = (await getCurrentSession()) ?? (await getLatestSession())
     }
 
     if (!session) {
-      return text('No HIS session found to export.')
+      return text('No HIS tracker session found to export.')
     }
 
-    const { data, error } = await supabase
-      .from('his_entries')
-      .select('*')
-      .eq('session_id', session.id)
-      .order('occurred_at', { ascending: true })
-
-    if (error) throw error
-
-    const entries = (data ?? []) as HisEntry[]
+    const events = parseHisEvents(session.notes)
 
     return text(
       [
-        'HIS SESSION EXPORT',
+        'HIS TRACKER SESSION EXPORT',
         `Session ID: ${session.id}`,
-        `Status: ${session.status}`,
-        `Started: ${formatSydney(session.started_at)}`,
-        `Paused: ${formatSydney(session.paused_at)}`,
-        `Stopped: ${formatSydney(session.stopped_at)}`,
+        `User ID: ${session.user_id}`,
+        `Status: ${getLastStatus(session, events)}`,
+        `Date start: ${session.date_start}`,
+        `Date end: ${session.date_end ?? 'none'}`,
+        `Started: ${formatSydney(getStartIso(session, events))}`,
         `Tracked duration: ${msToHuman(activeDurationMs(session))}`,
-        `Mood marker: ${session.mood_marker ?? 'none'}`,
+        `Mood marker: ${getLastMood(events)}`,
+        '',
+        'Original fields:',
+        `sleep_hours: ${session.sleep_hours ?? 'none'}`,
+        `any_incidents: ${session.any_incidents ?? ''}`,
+        `personal_reflection: ${session.personal_reflection ?? ''}`,
         '',
         'Timeline:',
-        entries.length
-          ? entries
-              .map((entry) =>
+        events.length
+          ? events
+              .map((event) =>
                 [
-                  `${formatSydney(entry.occurred_at)} — ${entry.entry_type.toUpperCase()}`,
-                  entry.mood ? `Mood: ${entry.mood}` : null,
-                  entry.body ? `Text: ${entry.body}` : null,
+                  `${formatSydney(event.at)} — ${event.type}`,
+                  event.text ? `Text: ${event.text}` : null,
                 ]
                   .filter(Boolean)
                   .join('\n'),
               )
               .join('\n\n')
-          : 'No entries.',
+          : 'No HIS timeline entries found in notes.',
+        '',
+        'Raw notes:',
+        session.notes ?? '',
+      ].join('\n'),
+    )
+  },
+)
+
+server.registerTool(
+  'his_schema',
+  {
+    description: 'Show the database table/column assumptions this MCP uses.',
+    inputSchema: {},
+  },
+  async () => {
+    return text(
+      [
+        'HIS MCP database mapping:',
+        `Main table: public.${SESSION_TABLE}`,
+        'Required columns used:',
+        '- id',
+        '- user_id',
+        '- date_start',
+        '- date_end',
+        '- sleep_hours',
+        '- any_incidents',
+        '- personal_reflection',
+        '- notes',
+        '- is_sensitive',
+        '- created_at',
+        '',
+        'State is stored in notes using [HIS:START], [HIS:PAUSE], [HIS:RESUME], [HIS:STOP], [HIS:NOTE], and [HIS:MOOD] lines.',
+        'Active/current session means: date_end is null for HIS_USER_ID.',
       ].join('\n'),
     )
   },
@@ -606,16 +677,17 @@ server.registerTool(
     return text(
       [
         'HIS MCP commands:',
-        '/his-seshstart [optional datetime] — starts a new session, or resumes if paused.',
-        '/his-seshstop — active session becomes paused; paused session becomes stopped.',
-        '/his-note [text] — adds a mid-session note/log entry.',
-        '/his-mood [words] — sets quick mood marker during the session.',
+        '/his-seshstart [optional datetime] — starts a new tracker session, or resumes if paused.',
+        '/his-seshstop — active session becomes paused; paused session becomes stopped and date_end is set.',
+        '/his-note [text] — appends a note into drug_tracker_session.notes.',
+        '/his-mood [words] — appends a mood marker into drug_tracker_session.notes.',
         '/his-info — shows current session state, duration, and recent entries.',
-        '/his-list — shows recent sessions.',
+        '/his-list — shows recent tracker sessions.',
         '/his-export [optional session id] — exports one session as a timeline.',
+        '/his-schema — shows database mapping.',
         '',
         'Actual MCP tool names:',
-        'his_seshstart, his_seshstop, his_note, his_mood, his_info, his_list, his_export, his_help',
+        'his_seshstart, his_seshstop, his_note, his_mood, his_info, his_list, his_export, his_schema, his_help',
       ].join('\n'),
     )
   },
