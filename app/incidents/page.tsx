@@ -3,7 +3,7 @@ import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import AppShell from '@/components/layout/AppShell'
 import Link from 'next/link'
-import { formatDate } from '@/lib/utils'
+import { formatDateTime } from '@/lib/utils'
 
 export default async function IncidentsPage() {
   const profile = await getProfile()
@@ -34,7 +34,7 @@ export default async function IncidentsPage() {
             <Link key={inc.id} href={`/incidents/${inc.id}`}>
               <div className="border border-zinc-800 hover:border-zinc-700 bg-zinc-950 px-4 py-3.5 flex items-center justify-between transition-colors">
                 <div>
-                  <p className="text-xs font-mono text-zinc-500">{formatDate(inc.occurred_at)}</p>
+                  <p className="text-xs font-mono text-zinc-500">{formatDateTime(inc.occurred_at)}</p>
                   <p className="text-sm font-mono text-zinc-300 mt-0.5 truncate max-w-md">
                     {inc.is_sensitive && !canViewSensitive ? '[Restricted — insufficient clearance]' : inc.description}
                   </p>
