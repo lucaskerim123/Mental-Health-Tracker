@@ -101,7 +101,7 @@ export default function QuickSessionPanel({ activeSession, recentSessions }: Pro
     if (!activeSession) return
     setSaving(true)
     const supabase = createClient()
-    const { error } = await supabase.from('drug_tracker_sessions').update({ notes }).eq('id', activeSession.id)
+    const { error } = await supabase.from('drug_tracker_sessions').update({ notes: note }).eq('id', activeSession.id)
     if (error) toast.error('Failed: ' + error.message)
     else {
       toast.success('Note saved.')
