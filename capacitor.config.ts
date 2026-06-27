@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
-const serverUrl = process.env.CAPACITOR_SERVER_URL
-const serverHost = serverUrl ? new URL(serverUrl).hostname : undefined
+const serverUrl = process.env.CAPACITOR_SERVER_URL ?? 'https://public-mhtracker.vercel.app'
+const serverHost = new URL(serverUrl).hostname
 
 const config: CapacitorConfig = {
   appId: 'com.lucaskerim.mentalhealthtracker',
@@ -12,14 +12,12 @@ const config: CapacitorConfig = {
     backgroundColor: '#0f0f0f',
     webContentsDebuggingEnabled: false,
   },
-  server: serverUrl
-    ? {
-        url: serverUrl,
-        cleartext: false,
-        allowNavigation: serverHost ? [serverHost] : [],
-        appStartPath: '/mobile',
-      }
-    : undefined,
+  server: {
+    url: serverUrl,
+    cleartext: false,
+    allowNavigation: [serverHost],
+    appStartPath: '/mobile',
+  },
 }
 
 export default config
