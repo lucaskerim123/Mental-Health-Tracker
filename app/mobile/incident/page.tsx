@@ -7,7 +7,7 @@ import QuickIncidentForm from './QuickIncidentForm'
 
 export default async function MobileIncidentPage() {
   const profile = await getProfile()
-  if (!profile) redirect('/login?next=/mobile/incident')
+  if (!profile) redirect('/mobile/login?next=/mobile/incident')
 
   const isAdmin = profile.role === 'admin'
   const supabase = await createClient()
