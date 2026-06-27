@@ -1,4 +1,4 @@
-import UnlockForm from './UnlockForm'
+import UnlockForm from './unlock/UnlockForm'
 
 export const dynamic = 'force-dynamic'
 
