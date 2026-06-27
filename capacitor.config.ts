@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
-const serverUrl = process.env.CAPACITOR_SERVER_URL ?? 'https://mental-health-phome.vercel.app/mobile'
+const serverUrl = process.env.CAPACITOR_SERVER_URL ?? 'https://public-mhtracker.vercel.app/mobile'
 const serverHost = new URL(serverUrl).hostname
 
 const config: CapacitorConfig = {
