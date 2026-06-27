@@ -35,11 +35,11 @@ export default async function MobileHomePage() {
   return (
     <main className="min-h-screen bg-black text-zinc-100">
       <div className="mx-auto flex min-h-screen max-w-md flex-col px-4 pb-6 pt-5">
-        <header className="mb-5 rounded-[2rem] border border-zinc-800 bg-zinc-950 px-5 py-4 shadow-2xl shadow-black">
+        <header className="mb-4 rounded-[2rem] border border-zinc-800 bg-zinc-950 px-5 py-4 shadow-2xl shadow-black">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-mono uppercase tracking-[0.32em] text-zinc-600">Phone App</p>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-100">Quick Entry</h1>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-100">Quick Control</h1>
             </div>
             <div className="rounded-full border border-red-900/50 bg-red-950/20 px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-red-300">
               Private
@@ -48,10 +48,10 @@ export default async function MobileHomePage() {
           <p className="mt-3 text-xs font-mono text-zinc-600">{formatDateTime(new Date().toISOString())}</p>
         </header>
 
-        <section className="mb-4 rounded-[2rem] border border-amber-900/40 bg-gradient-to-br from-amber-950/30 to-zinc-950 px-5 py-5">
+        <section className="mb-4 rounded-[2rem] border border-amber-900/50 bg-gradient-to-br from-amber-950/40 to-zinc-950 px-5 py-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-amber-600">Current Session</p>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-amber-600">Session Tracker</p>
               {activeSession ? (
                 <>
                   <p className="mt-2 text-5xl font-semibold tracking-tight text-zinc-100">Day {daysUp(activeSession.date_start)}</p>
@@ -60,42 +60,41 @@ export default async function MobileHomePage() {
               ) : (
                 <>
                   <p className="mt-2 text-2xl font-semibold text-zinc-100">No active session</p>
-                  <p className="mt-2 text-xs font-mono text-zinc-600">Start one when you need tracking on.</p>
+                  <p className="mt-2 text-xs font-mono text-zinc-600">Start tracking when needed.</p>
                 </>
               )}
             </div>
             <TimerReset className="mt-1 h-6 w-6 text-amber-700" />
           </div>
+          {isAdmin && (
+            <Link href="/mobile/session" className="mt-5 flex items-center justify-between rounded-[1.5rem] border border-amber-900/60 bg-amber-950 px-5 py-5 active:scale-[0.99]">
+              <div>
+                <p className="text-lg font-semibold text-amber-100">Open Session Controls</p>
+                <p className="mt-1 text-xs font-mono text-amber-300/70">Start · sleep · note · close</p>
+              </div>
+              <Clock3 className="h-7 w-7 text-amber-300" />
+            </Link>
+          )}
         </section>
 
         <section className="mb-5 grid grid-cols-1 gap-3">
           {isAdmin && (
-            <Link href="/mobile/incident" className="flex items-center justify-between rounded-[1.75rem] border border-red-900/50 bg-red-950/20 px-5 py-5 active:scale-[0.99]">
+            <Link href="/mobile/incident" className="flex items-center justify-between rounded-[1.75rem] border border-red-900/50 bg-red-950/20 px-5 py-4 active:scale-[0.99]">
               <div>
-                <p className="text-xl font-semibold text-zinc-100">Add Incident</p>
+                <p className="text-lg font-semibold text-zinc-100">Add Incident</p>
                 <p className="mt-1 text-xs font-mono text-red-300/70">Fast log · severity · notes</p>
               </div>
-              <Plus className="h-7 w-7 text-red-500" />
-            </Link>
-          )}
-
-          {isAdmin && (
-            <Link href="/mobile/session" className="flex items-center justify-between rounded-[1.75rem] border border-amber-900/50 bg-amber-950/20 px-5 py-5 active:scale-[0.99]">
-              <div>
-                <p className="text-xl font-semibold text-zinc-100">Session Tracker</p>
-                <p className="mt-1 text-xs font-mono text-amber-300/70">Start · sleep · notes · close</p>
-              </div>
-              <Clock3 className="h-7 w-7 text-amber-500" />
+              <Plus className="h-6 w-6 text-red-500" />
             </Link>
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <Link href="/incidents" className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950 px-4 py-4 active:scale-[0.99]">
+            <Link href="/mobile/incidents" className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950 px-4 py-4 active:scale-[0.99]">
               <AlertTriangle className="mb-3 h-5 w-5 text-zinc-500" />
               <p className="text-sm font-semibold text-zinc-200">Incidents</p>
-              <p className="mt-1 text-[10px] font-mono text-zinc-600">Full list</p>
+              <p className="mt-1 text-[10px] font-mono text-zinc-600">Phone list</p>
             </Link>
-            <Link href="/tracker" className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950 px-4 py-4 active:scale-[0.99]">
+            <Link href="/mobile/sessions" className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950 px-4 py-4 active:scale-[0.99]">
               <FileText className="mb-3 h-5 w-5 text-zinc-500" />
               <p className="text-sm font-semibold text-zinc-200">History</p>
               <p className="mt-1 text-[10px] font-mono text-zinc-600">Sessions</p>
@@ -106,11 +105,11 @@ export default async function MobileHomePage() {
         <section className="mb-4 rounded-[1.75rem] border border-zinc-800 bg-zinc-950 px-4 py-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Recent incidents</p>
-            <Link href="/incidents" className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">All</Link>
+            <Link href="/mobile/incidents" className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">All</Link>
           </div>
           <div className="space-y-2">
             {recentIncidents?.length ? recentIncidents.map(incident => (
-              <Link key={incident.id} href={`/incidents/${incident.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-3 py-3">
+              <Link key={incident.id} href={`/mobile/incidents/${incident.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-mono text-zinc-500">{formatDate(incident.occurred_at)}</span>
                   <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] font-mono text-zinc-400">SEV {incident.severity}</span>
@@ -126,11 +125,11 @@ export default async function MobileHomePage() {
         <section className="rounded-[1.75rem] border border-zinc-800 bg-zinc-950 px-4 py-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Recent sessions</p>
-            <Link href="/tracker" className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">All</Link>
+            <Link href="/mobile/sessions" className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">All</Link>
           </div>
           <div className="space-y-2">
             {recentSessions?.length ? recentSessions.map(session => (
-              <Link key={session.id} href={`/tracker/${session.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-3 py-3">
+              <Link key={session.id} href={`/mobile/sessions/${session.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-mono text-zinc-500">{formatDate(session.date_start)}</span>
                   <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] font-mono text-zinc-400">{session.date_end ? 'Closed' : 'Open'}</span>
