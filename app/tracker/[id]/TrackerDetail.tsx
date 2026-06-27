@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDate, formatDateTime, daysUp } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Plus, Trash2, Edit2, X, Check, StopCircle, Lock } from 'lucide-react'
-import type { DrugTrackerSession, SleepLog, DrugUseLog } from '@/lib/supabase/types'
+import type { DrugTrackerSession, SleepLog, DrugUseLog, TrackerEntry } from '@/lib/supabase/types'
 
 interface LinkedIncident {
   id: string
@@ -26,11 +26,12 @@ interface Props {
   sleepLog: SleepLog[]
   drugUseLog: DrugUseLog[]
   linkedIncidents: LinkedIncident[]
+  entries: TrackerEntry[]
   isAdmin: boolean
   canViewSensitive: boolean
 }
 
-export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDrugUseLog, linkedIncidents, isAdmin, canViewSensitive }: Props) {
+export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDrugUseLog, linkedIncidents, entries: initialEntries, isAdmin, canViewSensitive }: Props) {
   const router = useRouter()
   const [s, setS] = useState(session)
   const [editing, setEditing] = useState(false)
@@ -46,6 +47,12 @@ export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDr
   const [showUsageInput, setShowUsageInput] = useState(false)
   const [usageForm, setUsageForm] = useState({ substance: '', amount: '', unit: '', notes: '' })
   const [addingUsage, setAddingUsage] = useState(false)
+
+  // Entries state
+  const [entries, setEntries] = useState<TrackerEntry[]>(initialEntries)
+  const [showEntryInput, setShowEntryInput] = useState(false)
+  const [entryContent, setEntryContent] = useState('')
+  const [addingEntry, setAddingEntry] = useState(false)
 
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -112,6 +119,32 @@ export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDr
     const { error } = await supabase.from('drug_use_log').delete().eq('id', id)
     if (error) { toast.error('Failed to delete.') }
     else { setDrugUseLog(prev => prev.filter(e => e.id !== id)) }
+  }
+
+  async function addEntry() {
+    if (!entryContent.trim()) { toast.error('Entry cannot be empty.'); return }
+    setAddingEntry(true)
+    const supabase = createClient()
+    const { data, error } = await supabase.from('tracker_entries').insert({
+      session_id: s.id,
+      content: entryContent.trim(),
+      source: 'ui',
+    }).select().single()
+    if (error) { toast.error('Failed to add entry.') }
+    else {
+      setEntries(prev => [data, ...prev])
+      setEntryContent('')
+      setShowEntryInput(false)
+      toast.success('Entry added.')
+    }
+    setAddingEntry(false)
+  }
+
+  async function deleteEntry(id: string) {
+    const supabase = createClient()
+    const { error } = await supabase.from('tracker_entries').delete().eq('id', id)
+    if (error) { toast.error('Failed to delete.') }
+    else { setEntries(prev => prev.filter(e => e.id !== id)) }
   }
 
   async function closeSession() {
@@ -283,6 +316,63 @@ export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDr
             </div>
           ) : (
             <p className="text-[11px] font-mono text-zinc-700">No usage logged yet.</p>
+          )}
+        </div>
+      )}
+
+      {/* Entries */}
+      {canViewSensitive && (
+        <div className="border border-zinc-800 bg-zinc-950 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-600">Entries</p>
+            {isAdmin && (
+              <button onClick={() => setShowEntryInput(v => !v)} className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-500 border border-zinc-700 px-3 py-1.5 hover:bg-zinc-800 transition-colors">
+                <Plus className="w-3 h-3" /> Add Entry
+              </button>
+            )}
+          </div>
+
+          {showEntryInput && (
+            <div className="border border-zinc-800 bg-zinc-900/30 p-4 mb-3 space-y-3">
+              <textarea
+                value={entryContent}
+                onChange={e => setEntryContent(e.target.value)}
+                rows={4}
+                placeholder="Write an entry…"
+                className="vault-input w-full resize-none text-sm"
+              />
+              <div className="flex items-center gap-2">
+                <button onClick={addEntry} disabled={addingEntry} className="text-[11px] font-mono text-zinc-200 bg-zinc-800 border border-zinc-600 px-4 py-1.5 hover:bg-zinc-700 disabled:opacity-40 uppercase tracking-widest">
+                  {addingEntry ? '...' : 'Save'}
+                </button>
+                <button onClick={() => { setShowEntryInput(false); setEntryContent('') }} className="text-[11px] font-mono text-zinc-600 hover:text-zinc-400 uppercase tracking-widest">Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {entries.length > 0 ? (
+            <div className="space-y-2">
+              {entries.map(entry => (
+                <div key={entry.id} className="border border-zinc-800/60 px-3 py-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-mono text-zinc-300 whitespace-pre-wrap leading-relaxed flex-1">{entry.content}</p>
+                    {isAdmin && (
+                      <button onClick={() => deleteEntry(entry.id)} className="text-zinc-700 hover:text-red-700 transition-colors shrink-0 mt-0.5">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <p className="text-[10px] font-mono text-zinc-700">{formatDateTime(entry.created_at)}</p>
+                    {entry.source === 'mcp' && (
+                      <span className="text-[9px] font-mono text-zinc-700 border border-zinc-800 px-1.5 py-0.5 uppercase tracking-widest">via AI</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11px] font-mono text-zinc-700">No entries yet.</p>
           )}
         </div>
       )}
