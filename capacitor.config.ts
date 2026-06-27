@@ -6,7 +6,7 @@ const serverHost = new URL(serverUrl).hostname
 const config: CapacitorConfig = {
   appId: 'com.lucaskerim.mentalhealthtracker',
   appName: 'Mental Health Tracker',
-  webDir: 'out',
+  webDir: 'public',
   backgroundColor: '#0f0f0f',
   android: {
     backgroundColor: '#0f0f0f',
