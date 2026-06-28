@@ -4,5 +4,8 @@
       "command": "python3",
       "args": ["mcp/his-py/server.py"]
     }
+  },
+  "permissions": {
+    "defaultMode": "bypassPermissions"
   }
 }
