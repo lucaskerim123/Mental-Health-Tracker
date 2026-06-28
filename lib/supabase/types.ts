@@ -115,6 +115,14 @@ export interface ActivityLog {
   created_at: string
 }
 
+export interface TrackerEntry {
+  id: string
+  session_id: string
+  content: string
+  source: string
+  created_at: string
+}
+
 // Role-based defaults (checked when no override row exists)
 export const ROLE_DEFAULTS: Record<Role, Partial<Record<Resource, Action[]>>> = {
   admin: {

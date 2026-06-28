@@ -1,14 +1,18 @@
-import UnlockForm from './unlock/UnlockForm'
+import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { getProfile } from '@/lib/auth'
 
-export const dynamic = 'force-dynamic'
+export default async function Home() {
+  const headerStore = await headers()
+  const userAgent = headerStore.get('user-agent') ?? ''
+  const isPhoneApp = userAgent.includes('MentalHealthTrackerApp')
+  const profile = await getProfile()
 
-export default function UnlockPage() {
-  return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="w-full max-w-sm px-4">
-        <p className="text-zinc-600 font-mono text-[10px] tracking-widest uppercase mb-8 text-center">Emergency Unlock</p>
-        <UnlockForm />
-      </div>
-    </div>
-  )
+  if (isPhoneApp) {
+    if (profile) redirect('/mobile')
+    redirect('/mobile/login?next=/mobile')
+  }
+
+  if (profile) redirect('/dashboard')
+  redirect('/login')
 }

@@ -15,6 +15,7 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
     { data: sleepLog },
     { data: drugUseLog },
     { data: linkedIncidents },
+    { data: entries },
   ] = await Promise.all([
     supabase.from('drug_tracker_sessions').select('*').eq('id', id).single(),
     supabase.from('sleep_log').select('*').eq('session_id', id).order('logged_at', { ascending: false }),
@@ -23,6 +24,7 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
       .select('id, occurred_at, severity, description, is_sensitive, police_called, ambulance_called, was_arrested, was_sectioned')
       .eq('tracker_session_id', id)
       .order('occurred_at', { ascending: true }),
+    supabase.from('tracker_entries').select('*').eq('session_id', id).order('created_at', { ascending: false }),
   ])
 
   if (!session) notFound()
@@ -51,6 +53,7 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
           sleepLog={sleepLog ?? []}
           drugUseLog={drugUseLog ?? []}
           linkedIncidents={linkedIncidents ?? []}
+          entries={entries ?? []}
           isAdmin={isAdmin}
           canViewSensitive={canViewSensitive}
         />

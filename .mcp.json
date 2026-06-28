@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "mental-health-tracker": {
+      "command": "npx",
+      "args": ["tsx", "mcp-server/tracker-mcp.ts"],
+      "env": {}
+    }
+  }
+}

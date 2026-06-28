@@ -541,12 +541,12 @@ export default function AdminClient({ users, currentUserId, overrideCounts, bans
   return (
     <div className="space-y-6">
       {/* Tab bar */}
-      <div className="flex border-b border-zinc-800">
+      <div className="flex border-b border-zinc-800 overflow-x-auto">
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-mono tracking-widest uppercase transition-colors border-b-2 -mb-px ${
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-mono tracking-widest uppercase transition-colors border-b-2 -mb-px shrink-0 ${
               tab === t.id
                 ? t.id === 'lockdown'
                   ? 'border-red-800 text-red-600'
