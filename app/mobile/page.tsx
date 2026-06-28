@@ -48,7 +48,7 @@ export default async function MobileHomePage() {
           <p className="mt-3 text-xs font-mono text-zinc-600">{formatDateTime(new Date().toISOString())}</p>
         </header>
 
-        <section className="mb-4 rounded-[2rem] border border-amber-900/50 bg-gradient-to-br from-amber-950/40 to-zinc-950 px-5 py-5">
+        <Link href="/mobile/session" className="mb-4 block rounded-[2rem] border border-amber-900/50 bg-gradient-to-br from-amber-950/40 to-zinc-950 px-5 py-5 active:scale-[0.99]">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-mono uppercase tracking-widest text-amber-600">Session Tracker</p>
@@ -60,13 +60,13 @@ export default async function MobileHomePage() {
               ) : (
                 <>
                   <p className="mt-2 text-2xl font-semibold text-zinc-100">No active session</p>
-                  <p className="mt-2 text-xs font-mono text-zinc-600">Start tracking when needed.</p>
+                  <p className="mt-2 text-xs font-mono text-zinc-600">Tap to start tracking.</p>
                 </>
               )}
             </div>
             <TimerReset className="mt-1 h-6 w-6 text-amber-700" />
           </div>
-        </section>
+        </Link>
 
         <section className="mb-5 grid grid-cols-1 gap-3">
           {isAdmin && (

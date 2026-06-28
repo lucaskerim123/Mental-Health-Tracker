@@ -21,17 +21,41 @@ interface LinkedIncident {
   was_sectioned: boolean
 }
 
+interface SessionEvent {
+  id: string
+  session_id: string
+  event_type: string
+  occurred_at: string
+}
+
+interface SessionMood {
+  id: string
+  session_id: string
+  mood: string
+  occurred_at: string
+}
+
+interface SessionNote {
+  id: string
+  session_id: string
+  note: string
+  occurred_at: string
+}
+
 interface Props {
   session: DrugTrackerSession
   sleepLog: SleepLog[]
   drugUseLog: DrugUseLog[]
   linkedIncidents: LinkedIncident[]
   entries: TrackerEntry[]
+  sessionEvents: SessionEvent[]
+  sessionMoods: SessionMood[]
+  sessionNotes: SessionNote[]
   isAdmin: boolean
   canViewSensitive: boolean
 }
 
-export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDrugUseLog, linkedIncidents, entries: initialEntries, isAdmin, canViewSensitive }: Props) {
+export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDrugUseLog, linkedIncidents, entries: initialEntries, sessionEvents, sessionMoods, sessionNotes, isAdmin, canViewSensitive }: Props) {
   const router = useRouter()
   const [s, setS] = useState(session)
   const [editing, setEditing] = useState(false)
@@ -374,6 +398,55 @@ export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDr
           ) : (
             <p className="text-[11px] font-mono text-zinc-700">No entries yet.</p>
           )}
+        </div>
+      )}
+
+      {/* Mood log */}
+      {sessionMoods.length > 0 && (
+        <div className="border border-zinc-800 bg-zinc-950 p-5">
+          <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-600 mb-3">
+            Mood Log <span className="text-zinc-700">({sessionMoods.length})</span>
+          </p>
+          <div className="space-y-1.5">
+            {sessionMoods.map(m => (
+              <div key={m.id} className="flex items-center justify-between border border-zinc-800/60 px-3 py-2">
+                <span className="text-sm font-mono text-zinc-300">{m.mood}</span>
+                <span className="text-[10px] font-mono text-zinc-700">{formatDateTime(m.occurred_at)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Session notes */}
+      {sessionNotes.length > 0 && (
+        <div className="border border-zinc-800 bg-zinc-950 p-5">
+          <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-600 mb-3">
+            Session Notes <span className="text-zinc-700">({sessionNotes.length})</span>
+          </p>
+          <div className="space-y-2">
+            {sessionNotes.map(n => (
+              <div key={n.id} className="border border-zinc-800/60 px-3 py-2.5">
+                <p className="text-sm font-mono text-zinc-300 whitespace-pre-wrap leading-relaxed">{n.note}</p>
+                <p className="text-[10px] font-mono text-zinc-700 mt-1">{formatDateTime(n.occurred_at)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Session events */}
+      {sessionEvents.length > 0 && (
+        <div className="border border-zinc-800 bg-zinc-950 p-5">
+          <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-600 mb-3">Session Events</p>
+          <div className="space-y-1">
+            {sessionEvents.map(e => (
+              <div key={e.id} className="flex items-center justify-between border border-zinc-800/60 px-3 py-2">
+                <span className="text-[10px] font-mono text-zinc-500">[{e.event_type}]</span>
+                <span className="text-[10px] font-mono text-zinc-700">{formatDateTime(e.occurred_at)}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

@@ -26,6 +26,7 @@ export default function QuickSessionPanel({ activeSession, recentSessions }: Pro
   const [sleep, setSleep] = useState('')
   const [note, setNote] = useState(activeSession?.notes ?? '')
   const [saving, setSaving] = useState(false)
+  const [confirmClose, setConfirmClose] = useState(false)
 
   async function startSession() {
     setSaving(true)
@@ -59,7 +60,8 @@ export default function QuickSessionPanel({ activeSession, recentSessions }: Pro
 
   async function closeSession() {
     if (!activeSession) return
-    if (!confirm('Close current session?')) return
+    if (!confirmClose) { setConfirmClose(true); return }
+    setConfirmClose(false)
     setSaving(true)
     const supabase = createClient()
     const today = new Date().toISOString().split('T')[0]
@@ -118,8 +120,8 @@ export default function QuickSessionPanel({ activeSession, recentSessions }: Pro
           <>
             <p className="mt-3 text-6xl font-semibold tracking-tight text-zinc-100">Day {daysUp(activeSession.date_start)}</p>
             <p className="mt-2 text-xs font-mono text-zinc-500">Started {formatDate(activeSession.date_start)} · {activeSession.sleep_hours}h sleep</p>
-            <button type="button" onClick={closeSession} disabled={saving} className="mt-5 w-full rounded-[1.5rem] border border-zinc-700 bg-black px-4 py-4 text-sm font-semibold text-zinc-200 disabled:opacity-40">
-              Close Session
+            <button type="button" onClick={closeSession} disabled={saving} className={`mt-5 w-full rounded-[1.5rem] border px-4 py-4 text-sm font-semibold disabled:opacity-40 ${confirmClose ? 'border-red-900/60 bg-red-950 text-red-100' : 'border-zinc-700 bg-black text-zinc-200'}`}>
+              {confirmClose ? 'Tap again to confirm close' : 'Close Session'}
             </button>
           </>
         ) : (

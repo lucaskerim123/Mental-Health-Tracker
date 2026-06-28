@@ -16,6 +16,9 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
     { data: drugUseLog },
     { data: linkedIncidents },
     { data: entries },
+    { data: sessionEvents },
+    { data: sessionMoods },
+    { data: sessionNotes },
   ] = await Promise.all([
     supabase.from('drug_tracker_sessions').select('*').eq('id', id).single(),
     supabase.from('sleep_log').select('*').eq('session_id', id).order('logged_at', { ascending: false }),
@@ -25,6 +28,9 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
       .eq('tracker_session_id', id)
       .order('occurred_at', { ascending: true }),
     supabase.from('tracker_entries').select('*').eq('session_id', id).order('created_at', { ascending: false }),
+    supabase.from('session_events').select('*').eq('session_id', id).order('occurred_at', { ascending: true }),
+    supabase.from('session_moods').select('*').eq('session_id', id).order('occurred_at', { ascending: true }),
+    supabase.from('session_notes').select('*').eq('session_id', id).order('occurred_at', { ascending: true }),
   ])
 
   if (!session) notFound()
@@ -54,6 +60,9 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
           drugUseLog={drugUseLog ?? []}
           linkedIncidents={linkedIncidents ?? []}
           entries={entries ?? []}
+          sessionEvents={sessionEvents ?? []}
+          sessionMoods={sessionMoods ?? []}
+          sessionNotes={sessionNotes ?? []}
           isAdmin={isAdmin}
           canViewSensitive={canViewSensitive}
         />

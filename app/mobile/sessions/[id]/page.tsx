@@ -16,11 +16,17 @@ export default async function MobileSessionDetailPage({ params }: { params: Prom
     { data: sleepLog },
     { data: drugUseLog },
     { data: linkedIncidents },
+    { data: sessionEvents },
+    { data: sessionMoods },
+    { data: sessionNotes },
   ] = await Promise.all([
     supabase.from('drug_tracker_sessions').select('*').eq('id', id).single(),
-    supabase.from('sleep_log').select('*').eq('session_id', id).order('logged_at', { ascending: false }).limit(10),
-    supabase.from('drug_use_log').select('*').eq('session_id', id).order('logged_at', { ascending: false }).limit(10),
+    supabase.from('sleep_log').select('*').eq('session_id', id).order('logged_at', { ascending: true }),
+    supabase.from('drug_use_log').select('*').eq('session_id', id).order('logged_at', { ascending: true }),
     supabase.from('mental_health_incidents').select('id, occurred_at, severity, description').eq('tracker_session_id', id).order('occurred_at', { ascending: false }).limit(10),
+    supabase.from('session_events').select('*').eq('session_id', id).order('occurred_at', { ascending: true }),
+    supabase.from('session_moods').select('*').eq('session_id', id).order('occurred_at', { ascending: true }),
+    supabase.from('session_notes').select('*').eq('session_id', id).order('occurred_at', { ascending: true }),
   ])
 
   if (!session) notFound()
@@ -75,10 +81,45 @@ export default async function MobileSessionDetailPage({ params }: { params: Prom
           </div>
         </section>
 
-        {safeSession.notes && (
+        {sessionMoods && sessionMoods.length > 0 && (
           <section className="mb-4 rounded-[2rem] border border-zinc-800 bg-zinc-950 p-5">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Session note</p>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{safeSession.notes}</p>
+            <p className="mb-3 text-[10px] font-mono uppercase tracking-widest text-zinc-600">Mood log</p>
+            <div className="space-y-2">
+              {sessionMoods.map(m => (
+                <div key={m.id} className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-black px-4 py-3">
+                  <span className="text-sm text-zinc-200">{m.mood}</span>
+                  <span className="text-[10px] font-mono text-zinc-600">{formatDateTime(m.occurred_at)}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {sessionNotes && sessionNotes.length > 0 && (
+          <section className="mb-4 rounded-[2rem] border border-zinc-800 bg-zinc-950 p-5">
+            <p className="mb-3 text-[10px] font-mono uppercase tracking-widest text-zinc-600">Notes</p>
+            <div className="space-y-2">
+              {sessionNotes.map(n => (
+                <div key={n.id} className="rounded-2xl border border-zinc-800 bg-black px-4 py-3">
+                  <p className="text-sm leading-6 text-zinc-300">{n.note}</p>
+                  <p className="mt-1 text-[10px] font-mono text-zinc-600">{formatDateTime(n.occurred_at)}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {sessionEvents && sessionEvents.length > 0 && (
+          <section className="mb-4 rounded-[2rem] border border-zinc-800 bg-zinc-950 p-5">
+            <p className="mb-3 text-[10px] font-mono uppercase tracking-widest text-zinc-600">Session events</p>
+            <div className="space-y-2">
+              {sessionEvents.map(e => (
+                <div key={e.id} className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-black px-4 py-3">
+                  <span className="text-[10px] font-mono text-zinc-400">[{e.event_type}]</span>
+                  <span className="text-[10px] font-mono text-zinc-600">{formatDateTime(e.occurred_at)}</span>
+                </div>
+              ))}
+            </div>
           </section>
         )}
 
