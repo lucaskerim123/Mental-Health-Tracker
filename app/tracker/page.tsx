@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import AppShell from '@/components/layout/AppShell'
 import Link from 'next/link'
 import { formatDate, daysUp } from '@/lib/utils'
-import { sessionLabel } from '@/lib/visibility'
+import { sessionLabel } from '@/lib/sessions'
 
 export default async function TrackerPage() {
   const profile = await getProfile()
@@ -35,12 +35,12 @@ export default async function TrackerPage() {
               <div className="border border-zinc-800 hover:border-zinc-700 bg-zinc-950 px-4 py-4 flex items-center justify-between transition-colors">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
+                    <span className="text-[10px] font-mono text-zinc-400 tracking-widest uppercase">{sessionLabel(s)}</span>
                     <span className={`text-[10px] font-mono px-2 py-0.5 tracking-widest uppercase ${!s.date_end ? 'text-amber-700 bg-amber-950/30 border border-amber-900/30' : 'text-zinc-500 bg-zinc-800 border border-zinc-700'}`}>
-                      {!s.date_end ? `ONGOING - DAY ${daysUp(s.date_start)}` : `DAY ${daysUp(s.date_start, s.date_end)}`}
+                      {!s.date_end ? `ONGOING – DAY ${daysUp(s.date_start)}` : `DAY ${daysUp(s.date_start, s.date_end)}`}
                     </span>
-                    <span className="text-[10px] font-mono text-zinc-600">{sessionLabel(s)}</span>
                   </div>
-                  <p className="text-xs font-mono text-zinc-500">{formatDate(s.date_start)} {s.date_end ? `- ${formatDate(s.date_end)}` : '- present'}</p>
+                  <p className="text-xs font-mono text-zinc-500">{formatDate(s.date_start)} {s.date_end ? `→ ${formatDate(s.date_end)}` : '→ present'}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-mono text-zinc-400">{s.sleep_hours}h sleep</p>

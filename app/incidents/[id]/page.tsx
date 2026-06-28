@@ -3,6 +3,7 @@ import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import AppShell from '@/components/layout/AppShell'
 import IncidentDetail from './IncidentDetail'
+import type { MentalHealthIncident } from '@/lib/supabase/types'
 
 export default async function IncidentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -21,7 +22,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
     <AppShell role={profile.role} displayName={profile.display_name}>
       <main className="max-w-2xl mx-auto px-4 py-8">
         <IncidentDetail
-          incident={incident}
+          incident={incident as MentalHealthIncident}
           role={profile.role}
           isAdmin={profile.role === 'admin'}
           trackerSessions={trackerSessions ?? []}

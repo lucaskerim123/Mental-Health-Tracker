@@ -4,7 +4,9 @@ import { ArrowLeft, TimerReset } from 'lucide-react'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { daysUp, formatDate, formatDateTime } from '@/lib/utils'
-import { incidentLabel, sessionLabel, visibleIncidentText, visibleSessionText } from '@/lib/visibility'
+import { incidentLabel, visibleIncidentText } from '@/lib/incidents'
+import { sessionLabel, visibleSessionText, isRestrictedSessionField, canViewSessionField } from '@/lib/sessions'
+import type { MentalHealthIncident } from '@/lib/supabase/types'
 
 export default async function MobileSessionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -24,7 +26,7 @@ export default async function MobileSessionDetailPage({ params }: { params: Prom
     supabase.from('drug_tracker_sessions').select('*').eq('id', id).single(),
     supabase.from('sleep_log').select('*').eq('session_id', id).order('logged_at', { ascending: true }),
     supabase.from('drug_use_log').select('*').eq('session_id', id).order('logged_at', { ascending: true }),
-    supabase.from('mental_health_incidents').select('id, incident_number, occurred_at, severity, description, field_visibility').eq('tracker_session_id', id).order('occurred_at', { ascending: false }).limit(10),
+    supabase.from('mental_health_incidents').select('id, incident_number, occurred_at, severity, description, sensitive_fields, field_visibility').eq('tracker_session_id', id).order('occurred_at', { ascending: false }).limit(10),
     supabase.from('session_events').select('*').eq('session_id', id).order('occurred_at', { ascending: true }),
     supabase.from('session_moods').select('*').eq('session_id', id).order('occurred_at', { ascending: true }),
     supabase.from('session_notes').select('*').eq('session_id', id).order('occurred_at', { ascending: true }),
@@ -32,7 +34,16 @@ export default async function MobileSessionDetailPage({ params }: { params: Prom
 
   if (!session) notFound()
 
-  const safeSession = session
+  const canViewSensitive = profile.role !== 'viewer'
+  const sensitiveFieldMask = !canViewSensitive
+    ? Object.fromEntries((session.sensitive_fields ?? []).map((field: string) => [field, null]))
+    : {}
+  const safeSession = canViewSensitive ? session : {
+    ...session,
+    personal_reflection: null,
+    ...(session.is_sensitive ? { any_incidents: null, notes: null } : {}),
+    ...sensitiveFieldMask,
+  }
 
   const isOpen = !safeSession.date_end
 
@@ -59,7 +70,7 @@ export default async function MobileSessionDetailPage({ params }: { params: Prom
         <section className="mb-4 rounded-[2rem] border border-amber-900/50 bg-amber-950/20 p-5">
           <p className="text-[10px] font-mono uppercase tracking-widest text-amber-300/70">Status</p>
           <p className="mt-3 text-4xl font-semibold text-zinc-100">{isOpen ? 'Open' : 'Closed'}</p>
-          <p className="mt-2 text-xs font-mono text-zinc-500">Started {formatDate(safeSession.date_start)}{safeSession.date_end ? ` - Ended ${formatDate(safeSession.date_end)}` : ''}</p>
+          <p className="mt-2 text-xs font-mono text-zinc-500">Started {formatDate(safeSession.date_start)}{safeSession.date_end ? ` · Ended ${formatDate(safeSession.date_end)}` : ''}</p>
         </section>
 
         <section className="mb-4 grid grid-cols-2 gap-3">
@@ -85,6 +96,10 @@ export default async function MobileSessionDetailPage({ params }: { params: Prom
               ))}
             </div>
           </section>
+        )}
+
+        {safeSession.brief_notes && (
+          <MobileText label="Brief notes" value={visibleSessionText(profile.role, safeSession, 'brief_notes', safeSession.brief_notes)} restricted={isRestrictedSessionField(profile.role, safeSession, 'brief_notes')} />
         )}
 
         {sessionNotes && sessionNotes.length > 0 && (
@@ -115,17 +130,17 @@ export default async function MobileSessionDetailPage({ params }: { params: Prom
           </section>
         )}
 
-        {visibleSessionText(profile.role, safeSession, 'brief_notes', safeSession.brief_notes) && (
+        {safeSession.any_incidents && (
           <section className="mb-4 rounded-[2rem] border border-red-900/40 bg-red-950/10 p-5">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-red-300/70">Brief notes</p>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{visibleSessionText(profile.role, safeSession, 'brief_notes', safeSession.brief_notes)}</p>
+            <p className="text-[10px] font-mono uppercase tracking-widest text-red-300/70">Any incidents</p>
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{safeSession.any_incidents}</p>
           </section>
         )}
 
-        {visibleSessionText(profile.role, safeSession, 'private_notes', safeSession.personal_reflection) && (
+        {canViewSensitive && safeSession.personal_reflection && (
           <section className="mb-4 rounded-[2rem] border border-zinc-800 bg-zinc-950 p-5">
             <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Private reflection</p>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{visibleSessionText(profile.role, safeSession, 'private_notes', safeSession.personal_reflection)}</p>
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{safeSession.personal_reflection}</p>
           </section>
         )}
 
@@ -141,7 +156,9 @@ export default async function MobileSessionDetailPage({ params }: { params: Prom
           </div>
         </section>
 
-        {profile.role !== 'viewer' && (
+        {(drugUseLog?.length ?? 0) > 0 && !canViewSessionField(profile.role, safeSession, 'usage_log') ? (
+          <MobileText label="Usage log" value="REDACTED" restricted />
+        ) : canViewSessionField(profile.role, safeSession, 'usage_log') && (
           <section className="mb-4 rounded-[2rem] border border-zinc-800 bg-zinc-950 p-5">
             <p className="mb-3 text-[10px] font-mono uppercase tracking-widest text-zinc-600">Usage log</p>
             <div className="space-y-2">
@@ -158,10 +175,20 @@ export default async function MobileSessionDetailPage({ params }: { params: Prom
           </section>
         )}
 
+        {safeSession.counsellor_notes && (
+          <MobileText label="Counsellor notes" value={visibleSessionText(profile.role, safeSession, 'counsellor_notes', safeSession.counsellor_notes)} restricted={isRestrictedSessionField(profile.role, safeSession, 'counsellor_notes')} />
+        )}
+        {safeSession.lawyer_notes && (
+          <MobileText label="Lawyer notes" value={visibleSessionText(profile.role, safeSession, 'lawyer_notes', safeSession.lawyer_notes)} restricted={isRestrictedSessionField(profile.role, safeSession, 'lawyer_notes')} />
+        )}
+        {safeSession.personal_reflection && (
+          <MobileText label="Private notes" value={visibleSessionText(profile.role, safeSession, 'private_notes', safeSession.personal_reflection)} restricted={isRestrictedSessionField(profile.role, safeSession, 'private_notes')} />
+        )}
+
         <section className="rounded-[2rem] border border-zinc-800 bg-zinc-950 p-5">
           <p className="mb-3 text-[10px] font-mono uppercase tracking-widest text-zinc-600">Linked incidents</p>
           <div className="space-y-2">
-            {linkedIncidents?.length ? linkedIncidents.map(incident => (
+            {(linkedIncidents as MentalHealthIncident[] | null)?.length ? (linkedIncidents as MentalHealthIncident[]).map(incident => (
               <Link key={incident.id} href={`/mobile/incidents/${incident.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-mono text-zinc-500">{incidentLabel(incident)} - {formatDate(incident.occurred_at)}</span>
@@ -174,5 +201,18 @@ export default async function MobileSessionDetailPage({ params }: { params: Prom
         </section>
       </div>
     </main>
+  )
+}
+
+function MobileText({ label, value, restricted }: { label: string; value: string | null; restricted: boolean }) {
+  if (!value) return null
+  return (
+    <section className="mb-4 rounded-[2rem] border border-zinc-800 bg-zinc-950 p-5">
+      <div className="flex items-center gap-2">
+        <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">{label}</p>
+        {restricted && <span className="rounded-full border border-red-900/40 px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-red-700">Restricted</span>}
+      </div>
+      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{value}</p>
+    </section>
   )
 }

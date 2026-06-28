@@ -5,14 +5,24 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate, formatDateTime } from '@/lib/utils'
+import { sessionLabel } from '@/lib/sessions'
 import { toast } from 'sonner'
 import { Trash2, Edit2, X, Check, Lock } from 'lucide-react'
-import type { FieldVisibilityLevel, IncidentFieldKey, IncidentFieldVisibility, MentalHealthIncident, Role } from '@/lib/supabase/types'
-import { incidentLabel, normalizeIncidentVisibility, REDACTED, sessionLabel, visibleIncidentText } from '@/lib/visibility'
+import type { FieldVisibilityLevel, IncidentFieldKey, MentalHealthIncident, Role } from '@/lib/supabase/types'
+import {
+  DEFAULT_INCIDENT_FIELD_VISIBILITY,
+  INCIDENT_VISIBILITY_OPTIONS,
+  REDACTED,
+  canViewIncidentField,
+  incidentLabel,
+  normalizeIncidentVisibility,
+  visibleIncidentList,
+  visibleIncidentText,
+} from '@/lib/incidents'
 
 interface TrackerSession {
   id: string
-  session_number?: number | null
+  session_number: number | null
   date_start: string
   date_end: string | null
 }
@@ -29,7 +39,10 @@ export default function IncidentDetail({ incident, role, isAdmin, trackerSession
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(incident)
   const [people, setPeople] = useState<string[]>(incident.people_involved ?? [])
-  const [fieldVisibility, setFieldVisibility] = useState<IncidentFieldVisibility>(normalizeIncidentVisibility(incident.field_visibility))
+  const [fieldVisibility, setFieldVisibility] = useState<Record<IncidentFieldKey, FieldVisibilityLevel>>(
+    normalizeIncidentVisibility(incident.field_visibility, incident.sensitive_fields)
+  )
+  const substanceColors = { no: 'text-zinc-500', yes: 'text-amber-600', comedown: 'text-orange-600' } as const
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -37,13 +50,17 @@ export default function IncidentDetail({ incident, role, isAdmin, trackerSession
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
-  function setVisibility(field: IncidentFieldKey, level: FieldVisibilityLevel) {
-    setFieldVisibility(prev => ({ ...prev, [field]: level }))
+  function setVisibility(field: IncidentFieldKey, value: FieldVisibilityLevel) {
+    setFieldVisibility(prev => ({ ...prev, [field]: value }))
   }
 
   async function save() {
     setSaving(true)
     const supabase = createClient()
+    const sensitiveFields = Object.entries(fieldVisibility)
+      .filter(([, value]) => value !== 'viewer+')
+      .map(([field]) => field)
+
     const { error } = await supabase
       .from('mental_health_incidents')
       .update({
@@ -51,24 +68,29 @@ export default function IncidentDetail({ incident, role, isAdmin, trackerSession
         severity: form.severity,
         description: form.description,
         location: form.location,
-        outcome: form.outcome,
-        professional_note: form.professional_note,
         personal_notes: form.personal_notes,
         notes: form.notes,
+        professional_note: form.professional_note,
+        outcome: form.outcome,
         substance_use: form.substance_use,
         police_called: form.police_called,
-        was_arrested: form.was_arrested,
+        was_arrested: form.police_called ? form.was_arrested : false,
         ambulance_called: form.ambulance_called,
-        was_sectioned: form.was_sectioned,
+        was_sectioned: form.ambulance_called ? form.was_sectioned : false,
         people_involved: people,
         tracker_session_id: form.tracker_session_id,
         is_sensitive: form.is_sensitive,
-        field_visibility: normalizeIncidentVisibility(fieldVisibility),
+        sensitive_fields: sensitiveFields,
+        field_visibility: fieldVisibility,
       })
       .eq('id', incident.id)
 
     if (error) toast.error('Save failed: ' + error.message)
-    else { toast.success('Saved.'); setEditing(false); router.refresh() }
+    else {
+      toast.success('Saved.')
+      setForm(prev => ({ ...prev, field_visibility: fieldVisibility, sensitive_fields: sensitiveFields, people_involved: people }))
+      setEditing(false)
+    }
     setSaving(false)
   }
 
@@ -82,14 +104,14 @@ export default function IncidentDetail({ incident, role, isAdmin, trackerSession
   }
 
   const linkedSession = trackerSessions.find(s => s.id === form.tracker_session_id)
-  const visibility = normalizeIncidentVisibility(fieldVisibility)
+  const visibilityIncident = { ...form, field_visibility: fieldVisibility, sensitive_fields: form.sensitive_fields ?? [] }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase">{incidentLabel(incident)}</h1>
-          <p className="text-[10px] text-zinc-600 font-mono mt-0.5">{formatDateTime(incident.occurred_at)}</p>
+          <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase">{incidentLabel(form)}</h1>
+          <p className="text-[10px] text-zinc-600 font-mono mt-0.5">{formatDateTime(form.occurred_at)}</p>
         </div>
         {isAdmin && (
           <div className="flex items-center gap-2">
@@ -113,10 +135,15 @@ export default function IncidentDetail({ incident, role, isAdmin, trackerSession
           <span className={`text-sm font-mono px-3 py-1 ${form.severity >= 7 ? 'text-red-700 bg-red-950/40 border border-red-900/40' : form.severity >= 4 ? 'text-amber-700 bg-amber-950/40 border border-amber-900/40' : 'text-zinc-500 bg-zinc-800 border border-zinc-700'}`}>
             SEV {form.severity}
           </span>
-          {form.police_called && <Badge>Police</Badge>}
-          {form.was_arrested && <Badge>Arrested</Badge>}
-          {form.ambulance_called && <Badge>Ambulance</Badge>}
-          {form.was_sectioned && <Badge>Sectioned</Badge>}
+          {form.substance_use && form.substance_use !== 'no' && (
+            <span className={`text-[10px] font-mono px-2 py-0.5 border border-amber-900/30 uppercase tracking-widest ${substanceColors[form.substance_use]}`}>
+              {form.substance_use === 'comedown' ? 'Comedown' : 'Substance Use'}
+            </span>
+          )}
+          {form.police_called && <span className="text-[10px] font-mono text-red-600 px-2 py-0.5 border border-red-900/40 uppercase tracking-widest">Police</span>}
+          {form.was_arrested && <span className="text-[10px] font-mono text-red-700 px-2 py-0.5 border border-red-900/50 bg-red-950/20 uppercase tracking-widest">Arrested</span>}
+          {form.ambulance_called && <span className="text-[10px] font-mono text-orange-600 px-2 py-0.5 border border-orange-900/40 uppercase tracking-widest">Ambulance</span>}
+          {form.was_sectioned && <span className="text-[10px] font-mono text-orange-700 px-2 py-0.5 border border-orange-900/50 bg-orange-950/20 uppercase tracking-widest">Sectioned</span>}
           {form.is_sensitive && <span className="text-[9px] font-mono text-red-800 tracking-widest uppercase border border-red-900/30 px-2 py-0.5">Sensitive</span>}
         </div>
 
@@ -125,69 +152,126 @@ export default function IncidentDetail({ incident, role, isAdmin, trackerSession
             <Field label="Date & Time">
               <input type="datetime-local" value={form.occurred_at.slice(0, 16)} onChange={e => set('occurred_at', e.target.value)} className="vault-input" required />
             </Field>
+
             <Field label="Severity">
               <input type="range" min={1} max={10} value={form.severity} onChange={e => set('severity', Number(e.target.value))} className="w-full accent-red-800" />
               <span className="text-[10px] font-mono text-zinc-500">{form.severity}/10</span>
             </Field>
-            <LockableField label="Incident Details" field="description" visibility={visibility} setVisibility={setVisibility}>
+
+            <LockableField label="Incident Details" field="description" visibility={fieldVisibility} setVisibility={setVisibility}>
               <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={3} className="vault-input resize-none" />
             </LockableField>
-            <LockableField label="Location" field="location" visibility={visibility} setVisibility={setVisibility}>
+
+            <LockableField label="Location" field="location" visibility={fieldVisibility} setVisibility={setVisibility}>
               <input value={form.location ?? ''} onChange={e => set('location', e.target.value)} className="vault-input" />
             </LockableField>
-            <LockableField label="Who Was Involved" field="people_involved" visibility={visibility} setVisibility={setVisibility}>
+
+            <LockableField label="Who was involved" field="people_involved" visibility={fieldVisibility} setVisibility={setVisibility}>
               <TagInput tags={people} onChange={setPeople} />
             </LockableField>
-            <Field label="Substance Use">
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Substance Use</label>
               <select value={form.substance_use ?? 'no'} onChange={e => set('substance_use', e.target.value)} className="vault-input">
                 <option value="no">No</option>
                 <option value="yes">Yes - Active use</option>
                 <option value="comedown">Comedown</option>
               </select>
-            </Field>
-            <CheckField label="Police called" checked={form.police_called} onChange={v => set('police_called', v)} />
-            {form.police_called && <CheckField label="Was arrested" checked={form.was_arrested} onChange={v => set('was_arrested', v)} />}
-            <CheckField label="Ambulance called" checked={form.ambulance_called} onChange={v => set('ambulance_called', v)} />
-            {form.ambulance_called && <CheckField label="Was sectioned" checked={form.was_sectioned} onChange={v => set('was_sectioned', v)} />}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Emergency Services</label>
+              <div className="space-y-2 border border-zinc-800 bg-zinc-900/30 p-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={form.police_called} onChange={e => set('police_called', e.target.checked)} className="accent-red-800 w-4 h-4" />
+                  <span className="text-sm font-mono text-zinc-400">Police called</span>
+                </label>
+                {form.police_called && (
+                  <div className="ml-7 border-l border-zinc-800 pl-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" checked={form.was_arrested} onChange={e => set('was_arrested', e.target.checked)} className="accent-red-800 w-4 h-4" />
+                      <span className="text-sm font-mono text-zinc-500">Was arrested</span>
+                    </label>
+                  </div>
+                )}
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={form.ambulance_called} onChange={e => set('ambulance_called', e.target.checked)} className="accent-red-800 w-4 h-4" />
+                  <span className="text-sm font-mono text-zinc-400">Ambulance called</span>
+                </label>
+                {form.ambulance_called && (
+                  <div className="ml-7 border-l border-zinc-800 pl-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" checked={form.was_sectioned} onChange={e => set('was_sectioned', e.target.checked)} className="accent-red-800 w-4 h-4" />
+                      <span className="text-sm font-mono text-zinc-500">Was sectioned</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {trackerSessions.length > 0 && (
-              <Field label="Linked Session">
+              <Field label="Link to Tracker Session">
                 <select value={form.tracker_session_id ?? ''} onChange={e => set('tracker_session_id', e.target.value || null)} className="vault-input">
                   <option value="">None</option>
-                  {trackerSessions.map(s => <option key={s.id} value={s.id}>{sessionLabel(s)} - {formatDate(s.date_start)}</option>)}
+                  {trackerSessions.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {sessionLabel(s)} - {formatDate(s.date_start)}{s.date_end ? ` -> ${formatDate(s.date_end)}` : ' (ongoing)'}
+                    </option>
+                  ))}
                 </select>
               </Field>
             )}
-            <LockableField label="Notes" field="notes" visibility={visibility} setVisibility={setVisibility}>
-              <textarea value={form.notes ?? ''} onChange={e => set('notes', e.target.value)} rows={3} className="vault-input resize-none" />
-            </LockableField>
-            <LockableField label="Private Notes" field="personal_notes" visibility={visibility} setVisibility={setVisibility}>
+
+            <LockableField label="Private Notes" field="personal_notes" visibility={fieldVisibility} setVisibility={setVisibility}>
               <textarea value={form.personal_notes ?? ''} onChange={e => set('personal_notes', e.target.value)} rows={4} className="vault-input resize-none" />
             </LockableField>
-            <LockableField label="Note for Counsellor or Lawyer" field="professional_note" visibility={visibility} setVisibility={setVisibility}>
+
+            <LockableField label="Notes" field="notes" visibility={fieldVisibility} setVisibility={setVisibility}>
+              <textarea value={form.notes ?? ''} onChange={e => set('notes', e.target.value)} rows={3} className="vault-input resize-none" />
+            </LockableField>
+
+            <LockableField label="Note for counsellor or lawyer" field="professional_note" visibility={fieldVisibility} setVisibility={setVisibility}>
               <textarea value={form.professional_note ?? ''} onChange={e => set('professional_note', e.target.value)} rows={3} className="vault-input resize-none" />
             </LockableField>
-            <LockableField label="Outcome" field="outcome" visibility={visibility} setVisibility={setVisibility}>
-              <textarea value={form.outcome ?? ''} onChange={e => set('outcome', e.target.value)} rows={2} className="vault-input resize-none" />
+
+            <LockableField label="What's outcome" field="outcome" visibility={fieldVisibility} setVisibility={setVisibility}>
+              <textarea value={form.outcome ?? ''} onChange={e => set('outcome', e.target.value)} rows={3} className="vault-input resize-none" />
             </LockableField>
-            <CheckField label="Mark entire entry as sensitive" checked={form.is_sensitive} onChange={v => set('is_sensitive', v)} />
+
+            <label className="flex items-center gap-3">
+              <input type="checkbox" checked={form.is_sensitive} onChange={e => set('is_sensitive', e.target.checked)} className="accent-red-800 w-4 h-4" />
+              <span className="text-[11px] font-mono text-zinc-500">Mark entire entry as sensitive (hides from viewers)</span>
+            </label>
           </>
         ) : (
           <>
-            <ReadField label="Incident Details" value={visibleIncidentText(role, form, 'description', form.description)} />
-            <ReadField label="Location" value={visibleIncidentText(role, form, 'location', form.location)} />
-            {people.length > 0 && <ReadField label="Who Was Involved" value={visibleIncidentText(role, form, 'people_involved', people.join(', '))} />}
+            <DisplayText label="Incident details" value={visibleIncidentText(role, visibilityIncident, 'description', form.description)} restricted={!canViewIncidentField(role, visibilityIncident, 'description')} />
+            <DisplayText label="Location" value={visibleIncidentText(role, visibilityIncident, 'location', form.location)} restricted={!canViewIncidentField(role, visibilityIncident, 'location')} />
+            <DisplayPeople role={role} incident={visibilityIncident} people={people} />
+
+            {(form.police_called || form.ambulance_called) && (
+              <div className="space-y-1">
+                <p className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Emergency Services</p>
+                <div className="space-y-1 font-mono text-sm">
+                  {form.police_called && <p className="text-zinc-400">Police called{form.was_arrested && <span className="ml-2 text-[10px] text-red-700 uppercase tracking-widest border border-red-900/40 px-1.5 py-0.5">Arrested</span>}</p>}
+                  {form.ambulance_called && <p className="text-zinc-400">Ambulance called{form.was_sectioned && <span className="ml-2 text-[10px] text-orange-700 uppercase tracking-widest border border-orange-900/40 px-1.5 py-0.5">Sectioned</span>}</p>}
+                </div>
+              </div>
+            )}
+
             {linkedSession && (
               <div className="space-y-1">
-                <p className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Linked Session</p>
+                <p className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Linked Tracker Session</p>
                 <Link href={`/tracker/${linkedSession.id}`} className="text-sm font-mono text-zinc-400 hover:text-zinc-200 underline underline-offset-2 transition-colors">
-                  {sessionLabel(linkedSession)} - {formatDate(linkedSession.date_start)}
+                  {sessionLabel(linkedSession)} - {formatDate(linkedSession.date_start)}{linkedSession.date_end ? ` -> ${formatDate(linkedSession.date_end)}` : ' (ongoing)'}
                 </Link>
               </div>
             )}
-            <ReadField label="Notes" value={visibleIncidentText(role, form, 'notes', form.notes)} />
-            <ReadField label="Private Notes" value={visibleIncidentText(role, form, 'personal_notes', form.personal_notes)} />
-            <ReadField label="Note for Counsellor or Lawyer" value={visibleIncidentText(role, form, 'professional_note', form.professional_note)} />
-            <ReadField label="Outcome" value={visibleIncidentText(role, form, 'outcome', form.outcome)} />
+
+            <DisplayText label="Notes" value={visibleIncidentText(role, visibilityIncident, 'notes', form.notes)} restricted={!canViewIncidentField(role, visibilityIncident, 'notes')} />
+            <DisplayText label="Private Notes" value={visibleIncidentText(role, visibilityIncident, 'personal_notes', form.personal_notes)} restricted={!canViewIncidentField(role, visibilityIncident, 'personal_notes')} />
+            <DisplayText label="Note for counsellor or lawyer" value={visibleIncidentText(role, visibilityIncident, 'professional_note', form.professional_note)} restricted={!canViewIncidentField(role, visibilityIncident, 'professional_note')} />
+            <DisplayText label="What's outcome" value={visibleIncidentText(role, visibilityIncident, 'outcome', form.outcome)} restricted={!canViewIncidentField(role, visibilityIncident, 'outcome')} />
           </>
         )}
       </div>
@@ -195,41 +279,63 @@ export default function IncidentDetail({ incident, role, isAdmin, trackerSession
   )
 }
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return <span className="text-[10px] font-mono text-red-700 px-2 py-0.5 border border-red-900/40 uppercase tracking-widest">{children}</span>
+function DisplayPeople({ role, incident, people }: { role: Role; incident: MentalHealthIncident; people: string[] }) {
+  const visible = visibleIncidentList(role, incident, 'people_involved', people)
+  if (!visible) return null
+  const restricted = visible === REDACTED
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        <p className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Who was involved</p>
+        {restricted && <span className="text-[9px] font-mono text-red-900/70 tracking-widest uppercase">Restricted</span>}
+      </div>
+      {restricted ? (
+        <p className="text-sm text-zinc-300 font-mono">{REDACTED}</p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {visible.map(p => <span key={p} className="text-[11px] font-mono text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 py-0.5">{p}</span>)}
+        </div>
+      )}
+    </div>
+  )
 }
 
-function CheckField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
-  return (
-    <label className="flex items-center gap-3 cursor-pointer">
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="accent-red-800 w-4 h-4" />
-      <span className="text-sm font-mono text-zinc-400">{label}</span>
-    </label>
-  )
+function DisplayText({ label, value, restricted }: { label: string; value: string | null; restricted: boolean }) {
+  if (!value) return null
+  return <ReadField label={label} restricted={restricted}>{value}</ReadField>
 }
 
 function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
   const [input, setInput] = useState('')
+
   function add(value: string) {
     const trimmed = value.trim().replace(/,+$/, '').trim()
     if (trimmed && !tags.includes(trimmed)) onChange([...tags, trimmed])
     setInput('')
   }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') { e.preventDefault(); add(input) }
+    if (e.key === ',') { e.preventDefault(); add(input) }
+    if (e.key === 'Backspace' && !input && tags.length > 0) onChange(tags.slice(0, -1))
+  }
+
   return (
     <div className="min-h-[2.5rem] flex flex-wrap gap-1.5 items-center border border-zinc-800 bg-black px-2 py-1.5 cursor-text">
       {tags.map(tag => (
         <span key={tag} className="flex items-center gap-1 text-[11px] font-mono text-zinc-300 bg-zinc-800 px-2 py-0.5">
           {tag}
-          <button type="button" onClick={() => onChange(tags.filter(t => t !== tag))} className="text-zinc-500 hover:text-zinc-200 leading-none"><X className="w-2.5 h-2.5" /></button>
+          <button type="button" onClick={() => onChange(tags.filter(t => t !== tag))} className="text-zinc-500 hover:text-zinc-200 leading-none">
+            <X className="w-2.5 h-2.5" />
+          </button>
         </span>
       ))}
       <input
+        type="text"
         value={input}
         onChange={e => setInput(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add(input) }
-          if (e.key === 'Backspace' && !input && tags.length > 0) onChange(tags.slice(0, -1))
-        }}
+        onKeyDown={onKeyDown}
         onBlur={() => input.trim() && add(input)}
         placeholder={tags.length === 0 ? 'Add names - Enter or comma to add...' : ''}
         className="flex-1 min-w-[160px] bg-transparent text-sm font-mono text-zinc-300 focus:outline-none placeholder:text-zinc-700"
@@ -239,14 +345,19 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">{label}</label>{children}</div>
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">{label}</label>
+      {children}
+    </div>
+  )
 }
 
 function LockableField({ label, field, visibility, setVisibility, children }: {
   label: string
   field: IncidentFieldKey
-  visibility: Required<IncidentFieldVisibility>
-  setVisibility: (field: IncidentFieldKey, level: FieldVisibilityLevel) => void
+  visibility: Record<IncidentFieldKey, FieldVisibilityLevel>
+  setVisibility: (field: IncidentFieldKey, value: FieldVisibilityLevel) => void
   children: React.ReactNode
 }) {
   const locked = visibility[field] !== 'viewer+'
@@ -255,13 +366,14 @@ function LockableField({ label, field, visibility, setVisibility, children }: {
       <div className="flex items-center justify-between gap-3">
         <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">{label}</label>
         <div className="flex items-center gap-2">
-          <Lock className={`w-3 h-3 ${locked ? 'text-red-700' : 'text-zinc-700'}`} />
-          <select value={visibility[field]} onChange={e => setVisibility(field, e.target.value as FieldVisibilityLevel)} className="bg-black border border-zinc-800 text-[10px] font-mono text-zinc-400 px-2 py-1">
-            <option value="viewer+">viewer+</option>
-            <option value="counsellor+">counsellor+</option>
-            <option value="lawyer+">lawyer+</option>
-            <option value="admin only">admin only</option>
+          <select
+            value={visibility[field]}
+            onChange={e => setVisibility(field, e.target.value as FieldVisibilityLevel)}
+            className="border border-zinc-800 bg-black px-2 py-1 text-[10px] font-mono uppercase tracking-widest text-zinc-500 outline-none"
+          >
+            {INCIDENT_VISIBILITY_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
           </select>
+          <Lock className={`w-3 h-3 ${locked ? 'text-red-700' : 'text-zinc-700'}`} />
         </div>
       </div>
       {children}
@@ -269,16 +381,14 @@ function LockableField({ label, field, visibility, setVisibility, children }: {
   )
 }
 
-function ReadField({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null
-  const restricted = value === REDACTED
+function ReadField({ label, restricted, children }: { label: string; restricted: boolean; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-2">
         <p className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">{label}</p>
         {restricted && <span className="text-[9px] font-mono text-red-900/70 tracking-widest uppercase">Restricted</span>}
       </div>
-      <p className="text-sm text-zinc-300 font-mono whitespace-pre-wrap leading-relaxed">{value}</p>
+      <p className="text-sm text-zinc-300 font-mono whitespace-pre-wrap leading-relaxed">{children}</p>
     </div>
   )
 }

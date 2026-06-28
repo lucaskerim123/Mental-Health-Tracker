@@ -6,16 +6,16 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Lock, X } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { sessionLabel } from '@/lib/sessions'
 import {
   DEFAULT_INCIDENT_FIELD_VISIBILITY,
-  INCIDENT_VISIBILITY_FIELDS,
-  normalizeIncidentVisibility,
-} from '@/lib/visibility'
+  INCIDENT_VISIBILITY_OPTIONS,
+} from '@/lib/incidents'
 import type { FieldVisibilityLevel, IncidentFieldKey, IncidentFieldVisibility } from '@/lib/supabase/types'
 
 interface TrackerSession {
   id: string
-  session_number?: number | null
+  session_number: number | null
   date_start: string
   date_end: string | null
 }
@@ -31,10 +31,10 @@ export default function NewIncidentForm({ trackerSessions }: Props) {
     severity: 5,
     description: '',
     location: '',
-    outcome: '',
-    professional_note: '',
     personal_notes: '',
     notes: '',
+    professional_note: '',
+    outcome: '',
     substance_use: 'no' as 'no' | 'yes' | 'comedown',
     police_called: false,
     was_arrested: false,
@@ -44,19 +44,17 @@ export default function NewIncidentForm({ trackerSessions }: Props) {
     tracker_session_id: null as string | null,
   })
   const [people, setPeople] = useState<string[]>([])
-  const [fieldVisibility, setFieldVisibility] = useState<IncidentFieldVisibility>(DEFAULT_INCIDENT_FIELD_VISIBILITY)
+  const [fieldVisibility, setFieldVisibility] = useState<Record<IncidentFieldKey, FieldVisibilityLevel>>({
+    ...DEFAULT_INCIDENT_FIELD_VISIBILITY,
+  })
   const [saving, setSaving] = useState(false)
 
   function set(field: string, value: unknown) {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
-  function setVisibility(field: IncidentFieldKey, level: FieldVisibilityLevel) {
-    setFieldVisibility(prev => ({ ...prev, [field]: level }))
-  }
-
-  function visibilityFor(field: IncidentFieldKey) {
-    return normalizeIncidentVisibility(fieldVisibility)[field]
+  function setVisibility(field: IncidentFieldKey, value: FieldVisibilityLevel) {
+    setFieldVisibility(prev => ({ ...prev, [field]: value }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -64,14 +62,45 @@ export default function NewIncidentForm({ trackerSessions }: Props) {
     setSaving(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      toast.error('Login expired.')
+      setSaving(false)
+      return
+    }
+
+    const sensitiveFields = Object.entries(fieldVisibility)
+      .filter(([, value]) => value !== 'viewer+')
+      .map(([field]) => field)
+
     const { error, data } = await supabase.from('mental_health_incidents').insert({
-      ...form,
-      user_id: user!.id,
+      occurred_at: form.occurred_at,
+      severity: form.severity,
+      description: form.description.trim(),
+      location: form.location.trim() || null,
+      personal_notes: form.personal_notes.trim() || null,
+      notes: form.notes.trim() || null,
+      professional_note: form.professional_note.trim() || null,
+      outcome: form.outcome.trim() || null,
+      substance_use: form.substance_use,
+      police_called: form.police_called,
+      was_arrested: form.police_called ? form.was_arrested : false,
+      ambulance_called: form.ambulance_called,
+      was_sectioned: form.ambulance_called ? form.was_sectioned : false,
+      is_sensitive: form.is_sensitive,
+      tracker_session_id: form.tracker_session_id,
+      user_id: user.id,
       people_involved: people,
-      field_visibility: normalizeIncidentVisibility(fieldVisibility),
+      sensitive_fields: sensitiveFields,
+      field_visibility: fieldVisibility satisfies IncidentFieldVisibility,
     }).select().single()
 
-    if (error) { toast.error('Failed to save: ' + error.message); setSaving(false); return }
+    if (error) {
+      toast.error('Failed to save: ' + error.message)
+      setSaving(false)
+      return
+    }
+
     toast.success('Incident recorded.')
     router.push(`/incidents/${data.id}`)
   }
@@ -89,25 +118,26 @@ export default function NewIncidentForm({ trackerSessions }: Props) {
         </div>
       </Field>
 
-      <LockableField label="Incident Details" field="description" visibilityFor={visibilityFor} setVisibility={setVisibility}>
+      <LockableField label="Incident Details" field="description" visibility={fieldVisibility} setVisibility={setVisibility}>
         <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={3} className="vault-input resize-none" required />
       </LockableField>
 
-      <LockableField label="Location" field="location" visibilityFor={visibilityFor} setVisibility={setVisibility}>
+      <LockableField label="Location" field="location" visibility={fieldVisibility} setVisibility={setVisibility}>
         <input value={form.location} onChange={e => set('location', e.target.value)} className="vault-input" />
       </LockableField>
 
-      <LockableField label="Who Was Involved" field="people_involved" visibilityFor={visibilityFor} setVisibility={setVisibility}>
+      <LockableField label="Who was involved" field="people_involved" visibility={fieldVisibility} setVisibility={setVisibility}>
         <TagInput tags={people} onChange={setPeople} />
       </LockableField>
 
-      <Field label="Substance Use">
+      <div className="space-y-1.5">
+        <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Substance Use</label>
         <select value={form.substance_use} onChange={e => set('substance_use', e.target.value)} className="vault-input">
           <option value="no">No</option>
           <option value="yes">Yes - Active use</option>
           <option value="comedown">Comedown</option>
         </select>
-      </Field>
+      </div>
 
       <div className="space-y-2">
         <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Emergency Services</label>
@@ -140,37 +170,37 @@ export default function NewIncidentForm({ trackerSessions }: Props) {
       </div>
 
       {trackerSessions.length > 0 && (
-        <Field label="Link to Session">
+        <Field label="Link to Tracker Session">
           <select value={form.tracker_session_id ?? ''} onChange={e => set('tracker_session_id', e.target.value || null)} className="vault-input">
             <option value="">None</option>
             {trackerSessions.map(s => (
               <option key={s.id} value={s.id}>
-                {s.session_number ? `Session #${s.session_number}` : formatDate(s.date_start)}{s.date_end ? ` - ${formatDate(s.date_end)}` : ' (ongoing)'}
+                {sessionLabel(s)} - {formatDate(s.date_start)}{s.date_end ? ` -> ${formatDate(s.date_end)}` : ' (ongoing)'}
               </option>
             ))}
           </select>
         </Field>
       )}
 
-      <LockableField label="Notes" field="notes" visibilityFor={visibilityFor} setVisibility={setVisibility}>
+      <LockableField label="Private Notes" field="personal_notes" visibility={fieldVisibility} setVisibility={setVisibility}>
+        <textarea value={form.personal_notes} onChange={e => set('personal_notes', e.target.value)} rows={4} placeholder="Private reflections - visible to counsellors+ by default" className="vault-input resize-none" />
+      </LockableField>
+
+      <LockableField label="General Notes" field="notes" visibility={fieldVisibility} setVisibility={setVisibility}>
         <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={3} className="vault-input resize-none" />
       </LockableField>
 
-      <LockableField label="Private Notes" field="personal_notes" visibilityFor={visibilityFor} setVisibility={setVisibility}>
-        <textarea value={form.personal_notes} onChange={e => set('personal_notes', e.target.value)} rows={4} className="vault-input resize-none" />
-      </LockableField>
-
-      <LockableField label="Note for Counsellor or Lawyer" field="professional_note" visibilityFor={visibilityFor} setVisibility={setVisibility}>
+      <LockableField label="Note for counsellor or lawyer" field="professional_note" visibility={fieldVisibility} setVisibility={setVisibility}>
         <textarea value={form.professional_note} onChange={e => set('professional_note', e.target.value)} rows={3} className="vault-input resize-none" />
       </LockableField>
 
-      <LockableField label="Outcome" field="outcome" visibilityFor={visibilityFor} setVisibility={setVisibility}>
-        <textarea value={form.outcome} onChange={e => set('outcome', e.target.value)} rows={2} className="vault-input resize-none" />
+      <LockableField label="What's outcome" field="outcome" visibility={fieldVisibility} setVisibility={setVisibility}>
+        <textarea value={form.outcome} onChange={e => set('outcome', e.target.value)} rows={3} className="vault-input resize-none" />
       </LockableField>
 
       <label className="flex items-center gap-3 cursor-pointer">
         <input type="checkbox" checked={form.is_sensitive} onChange={e => set('is_sensitive', e.target.checked)} className="accent-red-800 w-4 h-4" />
-        <span className="text-[11px] font-mono text-zinc-500 tracking-wide">Mark entire entry as sensitive</span>
+        <span className="text-[11px] font-mono text-zinc-500 tracking-wide">Mark entire entry as sensitive (hides from viewers)</span>
       </label>
 
       <div className="flex gap-3 pt-2">
@@ -230,28 +260,27 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function LockableField({ label, field, visibilityFor, setVisibility, children }: {
+function LockableField({ label, field, visibility, setVisibility, children }: {
   label: string
   field: IncidentFieldKey
-  visibilityFor: (f: IncidentFieldKey) => FieldVisibilityLevel
-  setVisibility: (f: IncidentFieldKey, level: FieldVisibilityLevel) => void
+  visibility: Record<IncidentFieldKey, FieldVisibilityLevel>
+  setVisibility: (field: IncidentFieldKey, value: FieldVisibilityLevel) => void
   children: React.ReactNode
 }) {
-  const visibility = visibilityFor(field)
-  const locked = visibility !== 'viewer+'
+  const locked = visibility[field] !== 'viewer+'
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-3">
         <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">{label}</label>
         <div className="flex items-center gap-2">
-          <Lock className={`w-3 h-3 ${locked ? 'text-red-700' : 'text-zinc-700'}`} />
-          <select value={visibility} onChange={e => setVisibility(field, e.target.value as FieldVisibilityLevel)} className="bg-black border border-zinc-800 text-[10px] font-mono text-zinc-400 px-2 py-1">
-            {INCIDENT_VISIBILITY_FIELDS.map(() => null)[0]}
-            <option value="viewer+">viewer+</option>
-            <option value="counsellor+">counsellor+</option>
-            <option value="lawyer+">lawyer+</option>
-            <option value="admin only">admin only</option>
+          <select
+            value={visibility[field]}
+            onChange={e => setVisibility(field, e.target.value as FieldVisibilityLevel)}
+            className="border border-zinc-800 bg-black px-2 py-1 text-[10px] font-mono uppercase tracking-widest text-zinc-500 outline-none"
+          >
+            {INCIDENT_VISIBILITY_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
           </select>
+          <Lock className={`w-3 h-3 ${locked ? 'text-red-700' : 'text-zinc-700'}`} />
         </div>
       </div>
       {children}

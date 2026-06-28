@@ -4,7 +4,7 @@ import { ArrowLeft, TimerReset } from 'lucide-react'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { daysUp, formatDate } from '@/lib/utils'
-import { sessionLabel } from '@/lib/visibility'
+import { sessionLabel } from '@/lib/sessions'
 
 export default async function MobileSessionsPage() {
   const profile = await getProfile()
