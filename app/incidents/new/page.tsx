@@ -12,7 +12,7 @@ export default async function NewIncidentPage() {
   const supabase = await createClient()
   const { data: trackerSessions } = await supabase
     .from('drug_tracker_sessions')
-    .select('id, date_start, date_end')
+    .select('id, session_number, date_start, date_end')
     .order('date_start', { ascending: false })
 
   return (

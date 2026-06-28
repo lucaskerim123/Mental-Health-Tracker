@@ -1,6 +1,11 @@
-export type Role = 'admin' | 'counsellor' | 'viewer'
+export type Role = 'admin' | 'counsellor' | 'viewer' | 'lawyer'
 export type Resource = 'incidents' | 'tracker' | 'documents' | 'users' | 'admin'
 export type Action = 'view' | 'view_sensitive' | 'create' | 'edit' | 'delete' | 'manage_users' | 'manage_invites'
+export type FieldVisibilityLevel = 'viewer+' | 'counsellor+' | 'lawyer+' | 'admin only'
+export type IncidentFieldKey = 'description' | 'notes' | 'personal_notes' | 'professional_note' | 'location' | 'people_involved' | 'outcome'
+export type SessionFieldKey = 'brief_notes' | 'notes' | 'usage_log' | 'counsellor_notes' | 'lawyer_notes' | 'private_notes' | 'mcp_outputs'
+export type IncidentFieldVisibility = Partial<Record<IncidentFieldKey, FieldVisibilityLevel>>
+export type SessionFieldVisibility = Partial<Record<SessionFieldKey, FieldVisibilityLevel>>
 
 export interface UserProfile {
   id: string
@@ -22,6 +27,7 @@ export interface Invite {
 export interface MentalHealthIncident {
   id: string
   user_id: string
+  incident_number: number
   occurred_at: string
   severity: number
   description: string
@@ -29,6 +35,10 @@ export interface MentalHealthIncident {
   sensitive_fields: string[]
   personal_notes: string | null
   notes: string | null
+  location: string | null
+  outcome: string | null
+  professional_note: string | null
+  field_visibility: IncidentFieldVisibility
   names_involved: string | null
   substance_use: 'no' | 'yes' | 'comedown' | null
   emergency_services: boolean
@@ -44,9 +54,14 @@ export interface MentalHealthIncident {
 export interface DrugTrackerSession {
   id: string
   user_id: string
+  session_number: number
   date_start: string
   date_end: string | null
   sleep_hours: number
+  brief_notes: string | null
+  counsellor_notes: string | null
+  lawyer_notes: string | null
+  field_visibility: SessionFieldVisibility
   any_incidents: string | null
   personal_reflection: string | null
   notes: string | null
@@ -120,6 +135,10 @@ export interface TrackerEntry {
   session_id: string
   content: string
   source: string
+  entry_type: string
+  metadata: Record<string, unknown>
+  visibility: FieldVisibilityLevel
+  incident_id: string | null
   created_at: string
 }
 
@@ -141,5 +160,10 @@ export const ROLE_DEFAULTS: Record<Role, Partial<Record<Resource, Action[]>>> = 
     incidents: ['view'],
     tracker: ['view'],
     documents: ['view'],
+  },
+  lawyer: {
+    incidents: ['view', 'view_sensitive'],
+    tracker: ['view', 'view_sensitive'],
+    documents: ['view', 'view_sensitive'],
   },
 }

@@ -15,14 +15,12 @@ from __future__ import annotations
 
 import os
 
-# Load .env.local then .env so credentials work without exporting shell vars
 try:
     from dotenv import load_dotenv
     load_dotenv(".env.local", override=False)
     load_dotenv(".env", override=False)
 except ImportError:
-    pass  # python-dotenv not installed; rely on environment variables
-import re
+    pass
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -41,13 +39,11 @@ SESSION_TABLE  = "drug_tracker_sessions"
 LOG_TABLE      = "drug_use_log"
 INCIDENT_TABLE = "mental_health_incidents"
 SLEEP_TABLE    = "sleep_log"
+EVENTS_TABLE   = "session_events"
+MOODS_TABLE    = "session_moods"
+NOTES_TABLE    = "session_notes"
+ENTRIES_TABLE  = "tracker_entries"
 SYDNEY         = ZoneInfo("Australia/Sydney")
-
-HIS_PATTERN = re.compile(
-    r"^\[HIS:(?P<type>START|STOP|NOTE|MOOD)\]\s+"
-    r"(?P<at>[^\n]+?)(?:\s+::\s*(?P<text>.*))?$",
-    re.MULTILINE,
-)
 
 # ---------------------------------------------------------------------------
 # Startup
@@ -96,7 +92,6 @@ def iso_to_date(iso: str) -> str:
     return iso[:10]
 
 def fmt(iso: str | None) -> str:
-    """Format ISO timestamp for display in Sydney time."""
     if not iso:
         return "—"
     return datetime.fromisoformat(iso).astimezone(SYDNEY).strftime("%d %b %Y %H:%M:%S")
@@ -111,63 +106,36 @@ def ms_to_human(ms: int) -> str:
     if m: return f"{m}m {s}s"
     return f"{s}s"
 
-# ---------------------------------------------------------------------------
-# HIS event log (stored in drug_tracker_sessions.notes)
-# ---------------------------------------------------------------------------
+def session_label(session: dict | None) -> str:
+    if not session:
+        return "Session"
+    number = session.get("session_number")
+    return f"Session #{number}" if number else f"Session {session.get('id', '')[:8]}"
 
-def his_line(event_type: str, at: str, body: str | None = None) -> str:
-    safe = (body or "").replace("\n", " ").strip()
-    return f"[HIS:{event_type}] {at} :: {safe}" if safe else f"[HIS:{event_type}] {at}"
+def incident_label(incident: dict | None) -> str:
+    if not incident:
+        return "Incident"
+    number = incident.get("incident_number")
+    return f"Incident #{number}" if number else f"Incident {incident.get('id', '')[:8]}"
 
-def append_his(notes: str | None, event_type: str, at: str, body: str | None = None) -> str:
-    existing = (notes or "").rstrip()
-    line = his_line(event_type, at, body)
-    return f"{existing}\n{line}" if existing else line
-
-def parse_events(notes: str | None) -> list[dict]:
-    events: list[dict] = []
-    for m in HIS_PATTERN.finditer(notes or ""):
-        try:
-            at = datetime.fromisoformat(m.group("at").strip()).astimezone(timezone.utc).isoformat()
-        except ValueError:
-            continue
-        events.append({"type": m.group("type"), "at": at, "text": (m.group("text") or "").strip()})
-    return events
-
-def get_start_iso(session: dict, events: list[dict] | None = None) -> str:
-    if events is None:
-        events = parse_events(session.get("notes"))
-    start = next((e for e in events if e["type"] == "START"), None)
-    if start:
-        return start["at"]
-    if session.get("created_at"):
-        return datetime.fromisoformat(session["created_at"]).astimezone(timezone.utc).isoformat()
-    ds = session.get("date_start")
-    return datetime.fromisoformat(f"{ds}T00:00:00+00:00").isoformat() if ds else now_iso()
-
-def is_stopped(session: dict) -> bool:
-    return bool(session.get("date_end"))
-
-def duration_ms(session: dict) -> int:
-    events = parse_events(session.get("notes"))
-    start_ms = int(datetime.fromisoformat(get_start_iso(session, events)).timestamp() * 1000)
-    stops = [e for e in events if e["type"] == "STOP"]
-    end_ms = (
-        int(datetime.fromisoformat(stops[-1]["at"]).timestamp() * 1000)
-        if stops else
-        int(datetime.now(timezone.utc).timestamp() * 1000)
-    )
-    return max(0, end_ms - start_ms)
-
-def last_mood(events: list[dict]) -> str:
-    moods = [e for e in events if e["type"] == "MOOD"]
-    return moods[-1]["text"] if moods else "—"
-
-def recent_events(session: dict, n: int = 5) -> str:
-    events = parse_events(session.get("notes"))[-n:]
-    if not events:
-        return "  none"
-    return "\n".join(f"  {fmt(e['at'])}  [{e['type']}]  {e['text']}" for e in reversed(events))
+async def log_mcp_output(db: AsyncClient, session_id: str | None, content: str, entry_type: str = "mcp_output", incident_id: str | None = None) -> None:
+    if not session_id:
+        return
+    try:
+        await (
+            db.table(ENTRIES_TABLE)
+            .insert({
+                "session_id": session_id,
+                "content": content,
+                "source": "mcp",
+                "entry_type": entry_type,
+                "visibility": "admin only",
+                "incident_id": incident_id,
+            })
+            .execute()
+        )
+    except Exception:
+        pass
 
 # ---------------------------------------------------------------------------
 # Supabase helpers
@@ -196,19 +164,64 @@ async def latest_session(db: AsyncClient, uid: str) -> dict | None:
     )
     return resp.data[0] if resp.data else None
 
-async def set_notes(db: AsyncClient, session_id: str, notes: str) -> dict:
+async def get_session_events(db: AsyncClient, session_id: str) -> list[dict]:
     resp = await (
-        db.table(SESSION_TABLE)
-        .update({"notes": notes})
-        .eq("id", session_id)
+        db.table(EVENTS_TABLE)
         .select("*")
-        .single()
+        .eq("session_id", session_id)
+        .order("occurred_at", desc=False)
         .execute()
     )
-    return resp.data
+    return resp.data or []
+
+async def get_session_moods(db: AsyncClient, session_id: str) -> list[dict]:
+    resp = await (
+        db.table(MOODS_TABLE)
+        .select("*")
+        .eq("session_id", session_id)
+        .order("occurred_at", desc=False)
+        .execute()
+    )
+    return resp.data or []
+
+async def get_session_notes(db: AsyncClient, session_id: str) -> list[dict]:
+    resp = await (
+        db.table(NOTES_TABLE)
+        .select("*")
+        .eq("session_id", session_id)
+        .order("occurred_at", desc=False)
+        .execute()
+    )
+    return resp.data or []
+
+async def get_start_iso(db: AsyncClient, session: dict) -> str:
+    events = await get_session_events(db, session["id"])
+    start = next((e for e in events if e["event_type"] == "START"), None)
+    if start:
+        return start["occurred_at"]
+    if session.get("created_at"):
+        return datetime.fromisoformat(session["created_at"]).astimezone(timezone.utc).isoformat()
+    ds = session.get("date_start")
+    return datetime.fromisoformat(f"{ds}T00:00:00+00:00").isoformat() if ds else now_iso()
+
+async def get_duration_ms(db: AsyncClient, session: dict) -> int:
+    events = await get_session_events(db, session["id"])
+    start = next((e for e in events if e["event_type"] == "START"), None)
+    stop  = next((e for e in reversed(events) if e["event_type"] == "STOP"), None)
+    start_ms = int(datetime.fromisoformat(start["occurred_at"]).timestamp() * 1000) if start else 0
+    end_ms = (
+        int(datetime.fromisoformat(stop["occurred_at"]).timestamp() * 1000)
+        if stop else
+        int(datetime.now(timezone.utc).timestamp() * 1000)
+    )
+    return max(0, end_ms - start_ms)
+
+async def get_last_mood(db: AsyncClient, session_id: str) -> str:
+    moods = await get_session_moods(db, session_id)
+    return moods[-1]["mood"] if moods else "—"
 
 def _ctx(ctx: Context) -> tuple[AsyncClient, str]:
-    s = ctx.request_context.lifespan_state
+    s = ctx.request_context.lifespan_context
     return s["db"], s["uid"]
 
 # ---------------------------------------------------------------------------
@@ -232,39 +245,51 @@ async def startsesh(
     existing = await current_session(db, uid)
 
     if existing:
-        events = parse_events(existing.get("notes"))
+        start = await get_start_iso(db, existing)
+        dur   = await get_duration_ms(db, existing)
+        mood  = await get_last_mood(db, existing["id"])
+        moods = await get_session_moods(db, existing["id"])
+        notes = await get_session_notes(db, existing["id"])
         return "\n".join([
             "⚠️  Session already active.",
-            f"  Session ID : {existing['id']}",
-            f"  Started    : {fmt(get_start_iso(existing, events))}",
-            f"  Duration   : {ms_to_human(duration_ms(existing))}",
-            f"  Mood       : {last_mood(events)}",
-            f"  Entries    : {len(events)}",
+            f"  Session    : {session_label(existing)}",
+            f"  UUID       : {existing['id']}",
+            f"  Started    : {fmt(start)}",
+            f"  Duration   : {ms_to_human(dur)}",
+            f"  Mood       : {mood}",
+            f"  Moods      : {len(moods)}  Notes: {len(notes)}",
             "",
             "Use /stopsesh to end it first.",
         ])
 
-    start_notes = his_line("START", event_time, "Session started.")
+    session_id = str(uuid.uuid4())
     resp = await (
         db.table(SESSION_TABLE)
         .insert({
-            "id": str(uuid.uuid4()),
+            "id": session_id,
             "user_id": uid,
             "date_start": iso_to_date(event_time),
             "sleep_hours": 0,
             "any_incidents": "",
             "personal_reflection": "",
-            "notes": start_notes,
+            "notes": "",
             "is_sensitive": False,
         })
         .select("*")
-        .single()
         .execute()
     )
-    s = resp.data
+    s = resp.data[0]
+
+    await (
+        db.table(EVENTS_TABLE)
+        .insert({"session_id": session_id, "event_type": "START", "occurred_at": event_time})
+        .execute()
+    )
+
     return "\n".join([
         "✅  Session started.",
-        f"  Session ID : {s['id']}",
+        f"  Session    : {session_label(s)}",
+        f"  UUID       : {s['id']}",
         f"  Started    : {fmt(event_time)}",
         f"  Date       : {s['date_start']}",
     ])
@@ -292,15 +317,22 @@ async def stopsesh(
     if not session:
         return "No active session found. Use /startsesh to begin one."
 
-    events = parse_events(session.get("notes"))
+    start = await get_start_iso(db, session)
+    dur   = await get_duration_ms(db, session)
+    mood  = await get_last_mood(db, session["id"])
+    moods = await get_session_moods(db, session["id"])
+    notes = await get_session_notes(db, session["id"])
+
     summary = "\n".join([
         "Session summary:",
-        f"  Session ID   : {session['id']}",
-        f"  Started      : {fmt(get_start_iso(session, events))}",
-        f"  Duration     : {ms_to_human(duration_ms(session))}",
+        f"  Session      : {session_label(session)}",
+        f"  UUID         : {session['id']}",
+        f"  Started      : {fmt(start)}",
+        f"  Duration     : {ms_to_human(dur)}",
         f"  Sleep logged : {session.get('sleep_hours', 0)}h",
-        f"  Mood         : {last_mood(events)}",
-        f"  Entries      : {len(events)}",
+        f"  Mood (last)  : {mood}",
+        f"  Moods logged : {len(moods)}",
+        f"  Notes logged : {len(notes)}",
     ])
 
     if not confirm:
@@ -313,16 +345,18 @@ async def stopsesh(
         ])
 
     event_time = now_iso()
-    next_notes = append_his(session.get("notes"), "STOP", event_time, "Session stopped.")
-    resp = await (
-        db.table(SESSION_TABLE)
-        .update({"notes": next_notes, "date_end": iso_to_date(event_time)})
-        .eq("id", session["id"])
-        .select("*")
-        .single()
+    await (
+        db.table(EVENTS_TABLE)
+        .insert({"session_id": session["id"], "event_type": "STOP", "occurred_at": event_time})
         .execute()
     )
-    stopped = resp.data
+    await (
+        db.table(SESSION_TABLE)
+        .update({"date_end": iso_to_date(event_time)})
+        .eq("id", session["id"])
+        .execute()
+    )
+
     return "\n".join([
         "✅  Session stopped and saved.",
         "",
@@ -354,15 +388,12 @@ async def addsleep(
 
     new_total = float(session.get("sleep_hours") or 0) + hours
 
-    # Update running total on session
     await (
         db.table(SESSION_TABLE)
         .update({"sleep_hours": new_total})
         .eq("id", session["id"])
         .execute()
     )
-
-    # Audit row in sleep_log
     await (
         db.table(SLEEP_TABLE)
         .insert({"session_id": session["id"], "hours_added": hours})
@@ -373,7 +404,7 @@ async def addsleep(
         "✅  Sleep logged.",
         f"  Added        : {hours}h",
         f"  Session total: {new_total}h",
-        f"  Session ID   : {session['id']}",
+        f"  Session      : {session_label(session)}",
     ])
 
 
@@ -398,12 +429,18 @@ async def moodadd(
     if not session:
         return "No active session. Use /startsesh first."
 
-    next_notes = append_his(session.get("notes"), "MOOD", now_iso(), text)
-    updated = await set_notes(db, session["id"], next_notes)
+    resp = await (
+        db.table(MOODS_TABLE)
+        .insert({"session_id": session["id"], "mood": text, "source": "mcp", "occurred_at": now_iso()})
+        .select("*")
+        .execute()
+    )
+    entry = resp.data[0]
     return "\n".join([
         "✅  Mood logged.",
         f"  Mood       : {text}",
-        f"  Session ID : {updated['id']}",
+        f"  At         : {fmt(entry['occurred_at'])}",
+        f"  Session    : {session_label(session)}",
     ])
 
 
@@ -428,12 +465,18 @@ async def addnote(
     if not session:
         return "No active session. Use /startsesh first."
 
-    next_notes = append_his(session.get("notes"), "NOTE", now_iso(), text)
-    updated = await set_notes(db, session["id"], next_notes)
+    resp = await (
+        db.table(NOTES_TABLE)
+        .insert({"session_id": session["id"], "note": text, "source": "mcp", "entry_type": "note", "visibility": "counsellor+", "occurred_at": now_iso()})
+        .select("*")
+        .execute()
+    )
+    entry = resp.data[0]
     return "\n".join([
         "✅  Note added.",
         f"  Note       : {text}",
-        f"  Session ID : {updated['id']}",
+        f"  At         : {fmt(entry['occurred_at'])}",
+        f"  Session    : {session_label(session)}",
     ])
 
 
@@ -447,7 +490,7 @@ async def addnote(
 )
 async def loguse(
     ctx: Context,
-    substance: Annotated[str, Field(description="Substance name, e.g. meth, cannabis, alcohol.", min_length=1)],
+    substance: Annotated[Optional[str], Field(description="Substance name. Defaults to ice.", min_length=1)] = "ice",
     amount: Annotated[Optional[float], Field(description="Quantity, e.g. 0.1", ge=0)] = None,
     unit: Annotated[Optional[str], Field(description="Unit, e.g. g, mg, ml, standard.")] = None,
     notes: Annotated[Optional[str], Field(description="Optional extra notes.")] = None,
@@ -460,30 +503,32 @@ async def loguse(
     session = await current_session(db, uid)
     if not session:
         return "No active session. Use /startsesh first."
+    substance_name = (substance or "ice").strip() or "ice"
 
     resp = await (
         db.table(LOG_TABLE)
         .insert({
             "session_id": session["id"],
-            "substance": substance,
+            "substance": substance_name,
             "amount": amount,
             "unit": unit,
             "notes": notes,
         })
         .select("*")
-        .single()
         .execute()
     )
-    entry = resp.data
+    entry = resp.data[0]
     amount_str = f"{amount} {unit or ''}".strip() if amount is not None else "—"
-    return "\n".join(filter(None, [
+    output = "\n".join(filter(None, [
         "✅  Use logged.",
-        f"  Substance  : {substance}",
+        f"  Substance  : {substance_name}",
         f"  Amount     : {amount_str}",
         f"  Notes      : {notes}" if notes else None,
         f"  Logged at  : {fmt(entry.get('logged_at'))}",
         f"  Log ID     : {entry['id']}",
     ]))
+    await log_mcp_output(db, session["id"], output, "loguse")
+    return output
 
 
 # ---------------------------------------------------------------------------
@@ -501,8 +546,12 @@ async def createincident(
     occurred_at: Annotated[Optional[str], Field(description="ISO datetime. Blank = now.")] = None,
     personal_notes: Annotated[Optional[str], Field(description="Private notes (sensitive field).")] = None,
     notes: Annotated[Optional[str], Field(description="General notes.")] = None,
+    location: Annotated[Optional[str], Field(description="Incident location.")] = None,
+    professional_note: Annotated[Optional[str], Field(description="Note for counsellor or lawyer.")] = None,
+    outcome: Annotated[Optional[str], Field(description="Outcome or follow-up.")] = None,
     substance_use: Annotated[Optional[str], Field(description="'no', 'yes', or 'comedown'.")] = None,
     names_involved: Annotated[Optional[str], Field(description="Names of people involved (freetext).")] = None,
+    field_visibility: Annotated[Optional[dict], Field(description="Optional per-field visibility map.")] = None,
     is_sensitive: Annotated[bool, Field(description="Mark as sensitive (hidden from viewer role).")] = False,
     emergency_services: Annotated[bool, Field(description="Were emergency services involved?")] = False,
     police_called: Annotated[bool, Field(description="Was police called?")] = False,
@@ -514,16 +563,13 @@ async def createincident(
     """Create a mental health incident record in mental_health_incidents.
 
     Maps to /createincident. Required: severity, description.
-    Optional: everything else. Auto-links to the active session when link_session=true.
     """
     db, uid = _ctx(ctx)
     event_time = parse_datetime(occurred_at)
 
-    # Validate substance_use enum
     if substance_use and substance_use not in ("no", "yes", "comedown"):
         return "substance_use must be 'no', 'yes', or 'comedown'."
 
-    # Auto-link to current session
     session_id: str | None = None
     if link_session:
         session = await current_session(db, uid)
@@ -539,9 +585,22 @@ async def createincident(
             "description": description,
             "personal_notes": personal_notes,
             "notes": notes,
+            "location": location,
+            "professional_note": professional_note,
+            "outcome": outcome,
             "is_sensitive": is_sensitive,
             "substance_use": substance_use,
             "names_involved": names_involved,
+            "people_involved": [p.strip() for p in names_involved.split(",") if p.strip()] if names_involved else [],
+            "field_visibility": field_visibility or {
+                "description": "viewer+",
+                "notes": "viewer+",
+                "personal_notes": "counsellor+",
+                "professional_note": "counsellor+",
+                "location": "viewer+",
+                "people_involved": "viewer+",
+                "outcome": "viewer+",
+            },
             "emergency_services": emergency_services,
             "police_called": police_called,
             "ambulance_called": ambulance_called,
@@ -550,10 +609,9 @@ async def createincident(
             "tracker_session_id": session_id,
         })
         .select("*")
-        .single()
         .execute()
     )
-    inc = resp.data
+    inc = resp.data[0]
     flags = [k for k, v in {
         "emergency_services": emergency_services,
         "police_called": police_called,
@@ -562,16 +620,21 @@ async def createincident(
         "was_sectioned": was_sectioned,
     }.items() if v]
 
-    return "\n".join(filter(None, [
+    output = "\n".join(filter(None, [
         "✅  Incident created.",
-        f"  Incident ID  : {inc['id']}",
+        f"  Incident     : {incident_label(inc)}",
+        f"  UUID         : {inc['id']}",
         f"  Occurred     : {fmt(event_time)}",
         f"  Severity     : {severity}/10",
         f"  Description  : {description}",
+        f"  Location     : {location}" if location else None,
+        f"  Outcome      : {outcome}" if outcome else None,
         f"  Session link : {session_id or '—'}",
         f"  Flags        : {', '.join(flags)}" if flags else None,
         f"  Sensitive    : {'yes' if is_sensitive else 'no'}",
     ]))
+    await log_mcp_output(db, session_id, output, "createincident", inc["id"])
+    return output
 
 
 # ---------------------------------------------------------------------------
@@ -592,22 +655,25 @@ async def seshinfo(ctx: Context) -> str:
     if not session:
         return "No active session. Use /startsesh to begin one."
 
-    events = parse_events(session.get("notes"))
+    sid = session["id"]
+    start  = await get_start_iso(db, session)
+    dur    = await get_duration_ms(db, session)
+    moods  = await get_session_moods(db, sid)
+    notes  = await get_session_notes(db, sid)
+    events = await get_session_events(db, sid)
 
-    # Substance log count
     log_resp = await (
         db.table(LOG_TABLE)
         .select("id", count="exact")
-        .eq("session_id", session["id"])
+        .eq("session_id", sid)
         .execute()
     )
     log_count = log_resp.count or 0
 
-    # Incidents linked to this session
     inc_resp = await (
         db.table(INCIDENT_TABLE)
-        .select("id, severity, occurred_at, description")
-        .eq("tracker_session_id", session["id"])
+        .select("id, incident_number, severity, occurred_at, description")
+        .eq("tracker_session_id", sid)
         .order("occurred_at", desc=False)
         .execute()
     )
@@ -615,23 +681,38 @@ async def seshinfo(ctx: Context) -> str:
 
     lines = [
         "━━━  SESSION REPORT  ━━━",
-        f"  ID           : {session['id']}",
+        f"  Session      : {session_label(session)}",
+        f"  UUID         : {sid}",
         f"  Status       : active",
-        f"  Started      : {fmt(get_start_iso(session, events))}",
-        f"  Duration     : {ms_to_human(duration_ms(session))}",
+        f"  Started      : {fmt(start)}",
+        f"  Duration     : {ms_to_human(dur)}",
         f"  Sleep total  : {session.get('sleep_hours', 0)}h",
-        f"  Mood (last)  : {last_mood(events)}",
         f"  Use log      : {log_count} entries",
         f"  Incidents    : {len(incidents)}",
         "",
-        "Recent activity:",
-        recent_events(session, 5),
+        "━━━  EVENTS  ━━━",
     ]
+    for e in events:
+        lines.append(f"  {fmt(e['occurred_at'])}  [{e['event_type']}]")
+    if not events:
+        lines.append("  none")
+
+    lines += ["", "━━━  MOODS  ━━━"]
+    for m in moods:
+        lines.append(f"  {fmt(m['occurred_at'])}  {m['mood']}")
+    if not moods:
+        lines.append("  none")
+
+    lines += ["", "━━━  NOTES  ━━━"]
+    for n in notes:
+        lines.append(f"  {fmt(n['occurred_at'])}  {n['note']}")
+    if not notes:
+        lines.append("  none")
 
     if incidents:
-        lines += ["", "Linked incidents:"]
+        lines += ["", "━━━  LINKED INCIDENTS  ━━━"]
         for i in incidents:
-            lines.append(f"  [{i['severity']}/10] {fmt(i.get('occurred_at'))}  {i['description'][:60]}")
+            lines.append(f"  {incident_label(i)} [{i['severity']}/10] {fmt(i.get('occurred_at'))}  {i['description'][:60]}")
 
     return "\n".join(lines)
 
@@ -667,12 +748,14 @@ async def seshlist(
 
     lines = ["Recent sessions:"]
     for s in sessions:
-        events = parse_events(s.get("notes"))
-        status = "stopped" if is_stopped(s) else "active"
+        start  = await get_start_iso(db, s)
+        dur    = await get_duration_ms(db, s)
+        status = "stopped" if s.get("date_end") else "active"
         lines.append(
-            f"  {fmt(get_start_iso(s, events))}"
+            f"  {session_label(s)}"
+            f"  {fmt(start)}"
             f"  [{status}]"
-            f"  {ms_to_human(duration_ms(s))}"
+            f"  {ms_to_human(dur)}"
             f"  sleep={s.get('sleep_hours', 0)}h"
             f"  {s['id']}"
         )
@@ -691,7 +774,7 @@ async def seshexport(
     ctx: Context,
     session_id: Annotated[Optional[str], Field(description="Session UUID. Blank = current or latest.")] = None,
 ) -> str:
-    """Export a session as a full plain-text timeline including all events and substance log.
+    """Export a session as a full plain-text report with separate sections for events, moods, notes, substance log, and sleep log.
 
     Maps to /seshexport [session_id?].
     """
@@ -706,12 +789,17 @@ async def seshexport(
     if not session:
         return "No session found."
 
-    events = parse_events(session.get("notes"))
+    sid    = session["id"]
+    start  = await get_start_iso(db, session)
+    dur    = await get_duration_ms(db, session)
+    events = await get_session_events(db, sid)
+    moods  = await get_session_moods(db, sid)
+    notes  = await get_session_notes(db, sid)
 
     log_resp = await (
         db.table(LOG_TABLE)
         .select("*")
-        .eq("session_id", session["id"])
+        .eq("session_id", sid)
         .order("logged_at", desc=False)
         .execute()
     )
@@ -720,7 +808,7 @@ async def seshexport(
     sleep_resp = await (
         db.table(SLEEP_TABLE)
         .select("*")
-        .eq("session_id", session["id"])
+        .eq("session_id", sid)
         .order("logged_at", desc=False)
         .execute()
     )
@@ -728,35 +816,50 @@ async def seshexport(
 
     lines = [
         "━━━  SESSION EXPORT  ━━━",
-        f"  Session ID   : {session['id']}",
-        f"  Status       : {'stopped' if is_stopped(session) else 'active'}",
+        f"  Session      : {session_label(session)}",
+        f"  UUID         : {sid}",
+        f"  Status       : {'stopped' if session.get('date_end') else 'active'}",
         f"  Date start   : {session.get('date_start')}",
         f"  Date end     : {session.get('date_end') or '—'}",
-        f"  Started      : {fmt(get_start_iso(session, events))}",
-        f"  Duration     : {ms_to_human(duration_ms(session))}",
+        f"  Started      : {fmt(start)}",
+        f"  Duration     : {ms_to_human(dur)}",
         f"  Sleep total  : {session.get('sleep_hours', 0)}h",
         "",
-        "Event timeline:",
+        "━━━  EVENTS  ━━━",
     ]
     for e in events:
-        lines.append(f"  {fmt(e['at'])}  [{e['type']}]  {e['text']}")
+        lines.append(f"  {fmt(e['occurred_at'])}  [{e['event_type']}]")
     if not events:
         lines.append("  none")
 
-    lines += ["", "Substance log:"]
+    lines += ["", "━━━  MOODS  ━━━"]
+    for m in moods:
+        lines.append(f"  {fmt(m['occurred_at'])}  {m['mood']}")
+    if not moods:
+        lines.append("  none")
+
+    lines += ["", "━━━  NOTES  ━━━"]
+    for n in notes:
+        lines.append(f"  {fmt(n['occurred_at'])}  {n['note']}")
+    if not notes:
+        lines.append("  none")
+
+    lines += ["", "━━━  SUBSTANCE LOG  ━━━"]
     for e in log_entries:
         amt = f"{e.get('amount')} {e.get('unit') or ''}".strip() if e.get("amount") is not None else "—"
-        lines.append(f"  {fmt(e.get('logged_at'))}  {e.get('substance')}  {amt}")
+        line = f"  {fmt(e.get('logged_at'))}  {e.get('substance')}  {amt}"
+        if e.get("notes"):
+            line += f"  [{e['notes']}]"
+        lines.append(line)
     if not log_entries:
         lines.append("  none")
 
-    lines += ["", "Sleep log:"]
+    lines += ["", "━━━  SLEEP LOG  ━━━"]
     for e in sleep_entries:
         lines.append(f"  {fmt(e.get('logged_at'))}  +{e.get('hours_added')}h")
     if not sleep_entries:
         lines.append("  none")
 
-    lines += ["", "Raw notes:", session.get("notes") or "none"]
     return "\n".join(lines)
 
 
@@ -828,7 +931,7 @@ Session:
   /stopsesh confirm=true    Confirm and save the session.
   /seshinfo                 Full report on the current session.
   /seshlist [limit?]        List recent sessions (default 5).
-  /seshexport [id?]         Full export: events + substance log + sleep log.
+  /seshexport [id?]         Full export: events + moods + notes + substance + sleep.
 
 Logging:
   /addsleep [hours]         Log sleep hours (e.g. /addsleep 7.5).
@@ -863,4 +966,3 @@ if __name__ == "__main__":
         mcp.run(transport="streamable-http", port=port)
     else:
         mcp.run(transport="stdio")
-

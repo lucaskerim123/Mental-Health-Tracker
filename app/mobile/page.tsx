@@ -4,6 +4,7 @@ import { AlertTriangle, FileText, Plus, TimerReset } from 'lucide-react'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { daysUp, formatDate, formatDateTime } from '@/lib/utils'
+import { canViewIncidentField, incidentLabel, REDACTED, sessionLabel } from '@/lib/visibility'
 
 export default async function MobileHomePage() {
   const profile = await getProfile()
@@ -13,18 +14,18 @@ export default async function MobileHomePage() {
   const [{ data: activeSessions }, { data: recentIncidents }, { data: recentSessions }] = await Promise.all([
     supabase
       .from('drug_tracker_sessions')
-      .select('id, date_start, date_end, sleep_hours, any_incidents')
+      .select('id, session_number, date_start, date_end, sleep_hours, any_incidents')
       .is('date_end', null)
       .order('date_start', { ascending: false })
       .limit(1),
     supabase
       .from('mental_health_incidents')
-      .select('id, occurred_at, severity, description')
+      .select('id, incident_number, occurred_at, severity, description, field_visibility')
       .order('occurred_at', { ascending: false })
       .limit(3),
     supabase
       .from('drug_tracker_sessions')
-      .select('id, date_start, date_end, sleep_hours')
+      .select('id, session_number, date_start, date_end, sleep_hours')
       .order('date_start', { ascending: false })
       .limit(3),
   ])
@@ -55,7 +56,7 @@ export default async function MobileHomePage() {
               {activeSession ? (
                 <>
                   <p className="mt-2 text-5xl font-semibold tracking-tight text-zinc-100">Day {daysUp(activeSession.date_start)}</p>
-                  <p className="mt-2 text-xs font-mono text-zinc-500">Started {formatDate(activeSession.date_start)} · {activeSession.sleep_hours}h sleep</p>
+                  <p className="mt-2 text-xs font-mono text-zinc-500">{sessionLabel(activeSession)} - started {formatDate(activeSession.date_start)} - {activeSession.sleep_hours}h sleep</p>
                 </>
               ) : (
                 <>
@@ -73,7 +74,7 @@ export default async function MobileHomePage() {
             <Link href="/mobile/incident" className="flex items-center justify-between rounded-[1.75rem] border border-red-900/50 bg-red-950/20 px-5 py-4 active:scale-[0.99]">
               <div>
                 <p className="text-lg font-semibold text-zinc-100">Add Incident</p>
-                <p className="mt-1 text-xs font-mono text-red-300/70">Fast log · severity · notes</p>
+                <p className="mt-1 text-xs font-mono text-red-300/70">Fast log - severity - notes</p>
               </div>
               <Plus className="h-6 w-6 text-red-500" />
             </Link>
@@ -102,10 +103,10 @@ export default async function MobileHomePage() {
             {recentIncidents?.length ? recentIncidents.map(incident => (
               <Link key={incident.id} href={`/mobile/incidents/${incident.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-mono text-zinc-500">{formatDate(incident.occurred_at)}</span>
+                  <span className="text-[10px] font-mono text-zinc-500">{incidentLabel(incident)} - {formatDate(incident.occurred_at)}</span>
                   <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] font-mono text-zinc-400">SEV {incident.severity}</span>
                 </div>
-                <p className="mt-1 truncate text-xs font-mono text-zinc-400">{incident.description}</p>
+                <p className="mt-1 truncate text-xs font-mono text-zinc-400">{canViewIncidentField(profile.role, incident, 'description') ? incident.description : REDACTED}</p>
               </Link>
             )) : (
               <p className="py-3 text-center text-xs font-mono text-zinc-700">No incident entries.</p>
@@ -122,10 +123,10 @@ export default async function MobileHomePage() {
             {recentSessions?.length ? recentSessions.map(session => (
               <Link key={session.id} href={`/mobile/sessions/${session.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-mono text-zinc-500">{formatDate(session.date_start)}</span>
+                  <span className="text-[10px] font-mono text-zinc-500">{sessionLabel(session)} - {formatDate(session.date_start)}</span>
                   <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] font-mono text-zinc-400">{session.date_end ? 'Closed' : 'Open'}</span>
                 </div>
-                <p className="mt-1 text-xs font-mono text-zinc-400">{session.sleep_hours}h sleep · Day {daysUp(session.date_start, session.date_end)}</p>
+                <p className="mt-1 text-xs font-mono text-zinc-400">{session.sleep_hours}h sleep - Day {daysUp(session.date_start, session.date_end)}</p>
               </Link>
             )) : (
               <p className="py-3 text-center text-xs font-mono text-zinc-700">No tracker sessions.</p>

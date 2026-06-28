@@ -22,6 +22,7 @@ const ROLE_COLORS: Record<Role, string> = {
   admin: 'text-red-700',
   counsellor: 'text-amber-700',
   viewer: 'text-zinc-500',
+  lawyer: 'text-blue-700',
 }
 
 const TAB_ICONS: Record<Tab, React.ReactNode> = {
@@ -106,6 +107,7 @@ function UsersTab({ users: initialUsers, currentUserId, overrideCounts }: {
                 <select value={role} onChange={e => setRole(e.target.value as Role)} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none">
                   <option value="viewer">viewer</option>
                   <option value="counsellor">counsellor</option>
+                  <option value="lawyer">lawyer</option>
                   <option value="admin">admin</option>
                 </select>
               </div>

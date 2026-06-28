@@ -24,7 +24,7 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
     supabase.from('sleep_log').select('*').eq('session_id', id).order('logged_at', { ascending: false }),
     supabase.from('drug_use_log').select('*').eq('session_id', id).order('logged_at', { ascending: false }),
     supabase.from('mental_health_incidents')
-      .select('id, occurred_at, severity, description, is_sensitive, police_called, ambulance_called, was_arrested, was_sectioned')
+      .select('id, incident_number, occurred_at, severity, description, field_visibility, is_sensitive, police_called, ambulance_called, was_arrested, was_sectioned')
       .eq('tracker_session_id', id)
       .order('occurred_at', { ascending: true }),
     supabase.from('tracker_entries').select('*').eq('session_id', id).order('created_at', { ascending: false }),
@@ -35,27 +35,11 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
 
   if (!session) notFound()
 
-  const canViewSensitive = profile.role !== 'viewer'
-  const isAdmin = profile.role === 'admin'
-
-  const sensitiveFieldMask = !canViewSensitive
-    ? Object.fromEntries(
-        (session.sensitive_fields ?? []).map((f: string) => [f, null])
-      )
-    : {}
-
-  const safeSession = canViewSensitive ? session : {
-    ...session,
-    personal_reflection: null,
-    ...(session.is_sensitive ? { any_incidents: null, notes: null } : {}),
-    ...sensitiveFieldMask,
-  }
-
   return (
     <AppShell role={profile.role} displayName={profile.display_name}>
       <main className="max-w-2xl mx-auto px-4 py-8">
         <TrackerDetail
-          session={safeSession}
+          session={session}
           sleepLog={sleepLog ?? []}
           drugUseLog={drugUseLog ?? []}
           linkedIncidents={linkedIncidents ?? []}
@@ -63,8 +47,8 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
           sessionEvents={sessionEvents ?? []}
           sessionMoods={sessionMoods ?? []}
           sessionNotes={sessionNotes ?? []}
-          isAdmin={isAdmin}
-          canViewSensitive={canViewSensitive}
+          role={profile.role}
+          isAdmin={profile.role === 'admin'}
         />
       </main>
     </AppShell>

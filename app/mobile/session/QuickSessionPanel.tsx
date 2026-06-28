@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { daysUp, formatDate } from '@/lib/utils'
+import { DEFAULT_SESSION_FIELD_VISIBILITY, sessionLabel } from '@/lib/visibility'
 
 interface Session {
   id: string
+  session_number?: number | null
   date_start: string
   date_end: string | null
   sleep_hours: number
@@ -47,7 +49,7 @@ export default function QuickSessionPanel({ activeSession, recentSessions }: Pro
       notes: 'Started from phone app.',
       is_sensitive: false,
       sleep_hours: 0,
-      sensitive_fields: [],
+      field_visibility: DEFAULT_SESSION_FIELD_VISIBILITY,
     })
 
     if (error) toast.error('Failed: ' + error.message)
@@ -119,7 +121,7 @@ export default function QuickSessionPanel({ activeSession, recentSessions }: Pro
         {activeSession ? (
           <>
             <p className="mt-3 text-6xl font-semibold tracking-tight text-zinc-100">Day {daysUp(activeSession.date_start)}</p>
-            <p className="mt-2 text-xs font-mono text-zinc-500">Started {formatDate(activeSession.date_start)} · {activeSession.sleep_hours}h sleep</p>
+            <p className="mt-2 text-xs font-mono text-zinc-500">{sessionLabel(activeSession)} - started {formatDate(activeSession.date_start)} - {activeSession.sleep_hours}h sleep</p>
             <button type="button" onClick={closeSession} disabled={saving} className={`mt-5 w-full rounded-[1.5rem] border px-4 py-4 text-sm font-semibold disabled:opacity-40 ${confirmClose ? 'border-red-900/60 bg-red-950 text-red-100' : 'border-zinc-700 bg-black text-zinc-200'}`}>
               {confirmClose ? 'Tap again to confirm close' : 'Close Session'}
             </button>
@@ -166,10 +168,10 @@ export default function QuickSessionPanel({ activeSession, recentSessions }: Pro
           {recentSessions.length ? recentSessions.map(session => (
             <Link key={session.id} href={`/mobile/sessions/${session.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-4 py-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-mono text-zinc-500">{formatDate(session.date_start)}</span>
+                <span className="text-xs font-mono text-zinc-500">{sessionLabel(session)} - {formatDate(session.date_start)}</span>
                 <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] font-mono text-zinc-400">{session.date_end ? 'Closed' : 'Open'}</span>
               </div>
-              <p className="mt-1 text-xs font-mono text-zinc-400">{session.sleep_hours}h sleep · Day {daysUp(session.date_start, session.date_end)}</p>
+              <p className="mt-1 text-xs font-mono text-zinc-400">{session.sleep_hours}h sleep - Day {daysUp(session.date_start, session.date_end)}</p>
             </Link>
           )) : (
             <p className="py-3 text-center text-xs font-mono text-zinc-700">No sessions yet.</p>

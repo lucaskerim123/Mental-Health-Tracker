@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
+import { DEFAULT_INCIDENT_FIELD_VISIBILITY, sessionLabel } from '@/lib/visibility'
 
 interface TrackerSession {
   id: string
+  session_number?: number | null
   date_start: string
   date_end: string | null
 }
@@ -72,7 +74,7 @@ export default function QuickIncidentForm({ trackerSessions, activeSessionId }: 
       tracker_session_id: form.tracker_session_id || null,
       user_id: user.id,
       people_involved: peopleList,
-      sensitive_fields: [],
+      field_visibility: DEFAULT_INCIDENT_FIELD_VISIBILITY,
     })
 
     if (error) {
@@ -139,7 +141,7 @@ export default function QuickIncidentForm({ trackerSessions, activeSessionId }: 
               <option value="">No session</option>
               {trackerSessions.map(session => (
                 <option key={session.id} value={session.id}>
-                  {formatDate(session.date_start)}{session.date_end ? '' : ' — active'}
+                  {sessionLabel(session)} - {formatDate(session.date_start)}{session.date_end ? '' : ' active'}
                 </option>
               ))}
             </select>
