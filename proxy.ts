@@ -6,6 +6,7 @@ const EXEMPT_PATHS = [
   '/lockdown', '/unlock', '/banned',
   '/api/lockdown',
   '/login', '/join', '/setup', '/api/setup',
+  '/mobile/login',
 ]
 
 function getClientIp(request: NextRequest): string {
@@ -73,16 +74,21 @@ export async function proxy(request: NextRequest) {
   // Auth check
   const { data: { user } } = await supabase.auth.getUser()
 
-  const publicPaths = ['/login', '/join', '/setup', '/api/setup', '/lockdown', '/unlock', '/banned', '/api/lockdown']
+  const publicPaths = ['/login', '/join', '/setup', '/api/setup', '/lockdown', '/unlock', '/banned', '/api/lockdown', '/mobile/login']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
 
   if (!user && !isPublic) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    const loginPage = pathname.startsWith('/mobile') ? '/mobile/login' : '/login'
+    const next = encodeURIComponent(pathname)
+    return NextResponse.redirect(new URL(`${loginPage}?next=${next}`, request.url))
   }
 
   if (user) {
     if (pathname === '/login') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+    if (pathname === '/mobile/login') {
+      return NextResponse.redirect(new URL('/mobile', request.url))
     }
 
     // User ban check

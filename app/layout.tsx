@@ -6,8 +6,8 @@ import { Toaster } from '@/components/ui/sonner'
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Secure Portal',
-  description: 'Private access only',
+  title: 'Mental Health Tracker',
+  description: 'Private incident and session tracker',
   robots: 'noindex, nofollow',
 }
 

@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "mcp": "tsx mcp-server/tracker-mcp.ts"
+    "mcp": "tsx mcp-server/tracker-mcp.ts",
+    "android:init": "npx cap add android",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:run": "npx cap run android",
+    "android:build:debug": "cd android && gradlew.bat assembleDebug",
+    "android:build:release": "cd android && gradlew.bat bundleRelease"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
