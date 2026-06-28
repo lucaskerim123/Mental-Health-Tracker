@@ -61,4 +61,7 @@ body {
   .vault-input {
     @apply w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-red-900/60 transition-colors;
   }
+  .phone-input {
+    @apply w-full rounded-2xl border border-zinc-800 bg-black px-4 py-4 text-base text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-zinc-600 transition-colors;
+  }
 }
