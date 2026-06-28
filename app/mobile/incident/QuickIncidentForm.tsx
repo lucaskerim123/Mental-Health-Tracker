@@ -5,9 +5,12 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
+import { sessionLabel } from '@/lib/sessions'
+import { DEFAULT_INCIDENT_FIELD_VISIBILITY } from '@/lib/incidents'
 
 interface TrackerSession {
   id: string
+  session_number: number | null
   date_start: string
   date_end: string | null
 }
@@ -25,7 +28,10 @@ export default function QuickIncidentForm({ trackerSessions, activeSessionId }: 
     occurred_at: new Date().toISOString().slice(0, 16),
     severity: 5,
     description: '',
+    location: '',
     personal_notes: '',
+    professional_note: '',
+    outcome: '',
     substance_use: 'no' as 'no' | 'yes' | 'comedown',
     tracker_session_id: activeSessionId,
     police_called: false,
@@ -61,7 +67,10 @@ export default function QuickIncidentForm({ trackerSessions, activeSessionId }: 
       occurred_at: form.occurred_at,
       severity: form.severity,
       description: form.description.trim(),
+      location: form.location.trim() || null,
       personal_notes: form.personal_notes.trim(),
+      professional_note: form.professional_note.trim() || null,
+      outcome: form.outcome.trim() || null,
       notes: '',
       substance_use: form.substance_use,
       police_called: form.police_called,
@@ -72,7 +81,8 @@ export default function QuickIncidentForm({ trackerSessions, activeSessionId }: 
       tracker_session_id: form.tracker_session_id || null,
       user_id: user.id,
       people_involved: peopleList,
-      sensitive_fields: [],
+      sensitive_fields: ['personal_notes', 'professional_note'],
+      field_visibility: DEFAULT_INCIDENT_FIELD_VISIBILITY,
     })
 
     if (error) {
@@ -125,6 +135,10 @@ export default function QuickIncidentForm({ trackerSessions, activeSessionId }: 
           <input value={people} onChange={e => setPeople(e.target.value)} placeholder="Names separated by commas" className="phone-input" />
         </Field>
 
+        <Field label="Location">
+          <input value={form.location} onChange={e => set('location', e.target.value)} placeholder="Optional location" className="phone-input" />
+        </Field>
+
         <Field label="Substance use">
           <select value={form.substance_use} onChange={e => set('substance_use', e.target.value)} className="phone-input">
             <option value="no">No</option>
@@ -139,7 +153,7 @@ export default function QuickIncidentForm({ trackerSessions, activeSessionId }: 
               <option value="">No session</option>
               {trackerSessions.map(session => (
                 <option key={session.id} value={session.id}>
-                  {formatDate(session.date_start)}{session.date_end ? '' : ' — active'}
+                  {sessionLabel(session)} - {formatDate(session.date_start)}{session.date_end ? '' : ' - active'}
                 </option>
               ))}
             </select>
@@ -167,6 +181,27 @@ export default function QuickIncidentForm({ trackerSessions, activeSessionId }: 
           placeholder="Optional private notes..."
           className="mt-3 w-full resize-none rounded-3xl border border-zinc-800 bg-black px-4 py-4 text-base text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-zinc-600"
         />
+      </section>
+
+      <section className="rounded-[2rem] border border-zinc-800 bg-zinc-950 p-5 space-y-4">
+        <Field label="Counsellor/lawyer note">
+          <textarea
+            value={form.professional_note}
+            onChange={e => set('professional_note', e.target.value)}
+            rows={3}
+            placeholder="Optional professional note..."
+            className="w-full resize-none rounded-3xl border border-zinc-800 bg-black px-4 py-4 text-base text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-zinc-600"
+          />
+        </Field>
+        <Field label="Outcome">
+          <textarea
+            value={form.outcome}
+            onChange={e => set('outcome', e.target.value)}
+            rows={3}
+            placeholder="Optional outcome..."
+            className="w-full resize-none rounded-3xl border border-zinc-800 bg-black px-4 py-4 text-base text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-zinc-600"
+          />
+        </Field>
       </section>
 
       <button type="submit" disabled={saving} className="w-full rounded-[2rem] border border-red-900/60 bg-red-950 px-5 py-5 text-base font-semibold text-red-100 disabled:opacity-40">

@@ -14,13 +14,13 @@ export default async function MobileSessionPage() {
   const [{ data: activeSessions }, { data: recentSessions }] = await Promise.all([
     supabase
       .from('drug_tracker_sessions')
-      .select('id, date_start, date_end, sleep_hours, any_incidents, notes')
+      .select('id, session_number, date_start, date_end, sleep_hours, any_incidents, notes')
       .is('date_end', null)
       .order('date_start', { ascending: false })
       .limit(1),
     supabase
       .from('drug_tracker_sessions')
-      .select('id, date_start, date_end, sleep_hours')
+      .select('id, session_number, date_start, date_end, sleep_hours')
       .order('date_start', { ascending: false })
       .limit(5),
   ])

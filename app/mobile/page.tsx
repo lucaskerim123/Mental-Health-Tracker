@@ -4,6 +4,8 @@ import { AlertTriangle, FileText, Plus, TimerReset } from 'lucide-react'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { daysUp, formatDate, formatDateTime } from '@/lib/utils'
+import { incidentLabel, visibleIncidentText } from '@/lib/incidents'
+import type { MentalHealthIncident } from '@/lib/supabase/types'
 
 export default async function MobileHomePage() {
   const profile = await getProfile()
@@ -19,7 +21,7 @@ export default async function MobileHomePage() {
       .limit(1),
     supabase
       .from('mental_health_incidents')
-      .select('id, occurred_at, severity, description')
+      .select('id, incident_number, occurred_at, severity, description, sensitive_fields, field_visibility')
       .order('occurred_at', { ascending: false })
       .limit(3),
     supabase
@@ -99,13 +101,13 @@ export default async function MobileHomePage() {
             <Link href="/mobile/incidents" className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">All</Link>
           </div>
           <div className="space-y-2">
-            {recentIncidents?.length ? recentIncidents.map(incident => (
+            {(recentIncidents as MentalHealthIncident[] | null)?.length ? (recentIncidents as MentalHealthIncident[]).map(incident => (
               <Link key={incident.id} href={`/mobile/incidents/${incident.id}`} className="block rounded-2xl border border-zinc-800 bg-black px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-mono text-zinc-500">{formatDate(incident.occurred_at)}</span>
+                  <span className="text-[10px] font-mono text-zinc-500">{incidentLabel(incident)} - {formatDate(incident.occurred_at)}</span>
                   <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] font-mono text-zinc-400">SEV {incident.severity}</span>
                 </div>
-                <p className="mt-1 truncate text-xs font-mono text-zinc-400">{incident.description}</p>
+                <p className="mt-1 truncate text-xs font-mono text-zinc-400">{visibleIncidentText(profile.role, incident, 'description', incident.description)}</p>
               </Link>
             )) : (
               <p className="py-3 text-center text-xs font-mono text-zinc-700">No incident entries.</p>

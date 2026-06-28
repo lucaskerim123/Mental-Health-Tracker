@@ -169,6 +169,44 @@ def recent_events(session: dict, n: int = 5) -> str:
         return "  none"
     return "\n".join(f"  {fmt(e['at'])}  [{e['type']}]  {e['text']}" for e in reversed(events))
 
+def incident_label(incident: dict) -> str:
+    number = incident.get("incident_number")
+    return f"Incident #{number}" if number else f"Incident {incident.get('id')}"
+
+def session_label(session: dict) -> str:
+    number = session.get("session_number")
+    return f"Session #{number}" if number else f"Session {session.get('id')}"
+
+async def insert_optional(db: AsyncClient, table: str, payload: dict) -> dict | None:
+    try:
+        resp = await db.table(table).insert(payload).select("*").single().execute()
+        return resp.data
+    except Exception:
+        return None
+
+async def log_tracker_output(
+    db: AsyncClient,
+    session_id: str,
+    content: str,
+    entry_type: str = "mcp_output",
+    incident_id: str | None = None,
+) -> None:
+    payload = {
+        "session_id": session_id,
+        "content": content,
+        "source": "mcp",
+        "entry_type": entry_type,
+        "visibility": "admin only",
+        "incident_id": incident_id,
+    }
+    if await insert_optional(db, "tracker_entries", payload):
+        return
+    await insert_optional(db, "tracker_entries", {
+        "session_id": session_id,
+        "content": content,
+        "source": "mcp",
+    })
+
 # ---------------------------------------------------------------------------
 # Supabase helpers
 # ---------------------------------------------------------------------------
@@ -235,6 +273,7 @@ async def startsesh(
         events = parse_events(existing.get("notes"))
         return "\n".join([
             "⚠️  Session already active.",
+            f"  Session    : {session_label(existing)}",
             f"  Session ID : {existing['id']}",
             f"  Started    : {fmt(get_start_iso(existing, events))}",
             f"  Duration   : {ms_to_human(duration_ms(existing))}",
@@ -262,8 +301,10 @@ async def startsesh(
         .execute()
     )
     s = resp.data
+    await log_tracker_output(db, s["id"], "Session started.", "start")
     return "\n".join([
         "✅  Session started.",
+        f"  Session    : {session_label(s)}",
         f"  Session ID : {s['id']}",
         f"  Started    : {fmt(event_time)}",
         f"  Date       : {s['date_start']}",
@@ -295,6 +336,7 @@ async def stopsesh(
     events = parse_events(session.get("notes"))
     summary = "\n".join([
         "Session summary:",
+        f"  Session      : {session_label(session)}",
         f"  Session ID   : {session['id']}",
         f"  Started      : {fmt(get_start_iso(session, events))}",
         f"  Duration     : {ms_to_human(duration_ms(session))}",
@@ -323,6 +365,7 @@ async def stopsesh(
         .execute()
     )
     stopped = resp.data
+    await log_tracker_output(db, session["id"], "Session stopped.", "stop")
     return "\n".join([
         "✅  Session stopped and saved.",
         "",
@@ -368,11 +411,13 @@ async def addsleep(
         .insert({"session_id": session["id"], "hours_added": hours})
         .execute()
     )
+    await log_tracker_output(db, session["id"], f"Sleep logged: +{hours}h, total {new_total}h.", "sleep")
 
     return "\n".join([
         "✅  Sleep logged.",
         f"  Added        : {hours}h",
         f"  Session total: {new_total}h",
+        f"  Session      : {session_label(session)}",
         f"  Session ID   : {session['id']}",
     ])
 
@@ -400,9 +445,16 @@ async def moodadd(
 
     next_notes = append_his(session.get("notes"), "MOOD", now_iso(), text)
     updated = await set_notes(db, session["id"], next_notes)
+    await insert_optional(db, "session_moods", {
+        "session_id": session["id"],
+        "mood": text,
+        "source": "mcp",
+    })
+    await log_tracker_output(db, session["id"], f"Mood logged: {text}", "mood")
     return "\n".join([
         "✅  Mood logged.",
         f"  Mood       : {text}",
+        f"  Session    : {session_label(updated)}",
         f"  Session ID : {updated['id']}",
     ])
 
@@ -430,9 +482,18 @@ async def addnote(
 
     next_notes = append_his(session.get("notes"), "NOTE", now_iso(), text)
     updated = await set_notes(db, session["id"], next_notes)
+    await insert_optional(db, "session_notes", {
+        "session_id": session["id"],
+        "content": text,
+        "source": "mcp",
+        "entry_type": "note",
+        "visibility": "counsellor+",
+    })
+    await log_tracker_output(db, session["id"], f"Note added: {text}", "note")
     return "\n".join([
         "✅  Note added.",
         f"  Note       : {text}",
+        f"  Session    : {session_label(updated)}",
         f"  Session ID : {updated['id']}",
     ])
 
@@ -447,7 +508,7 @@ async def addnote(
 )
 async def loguse(
     ctx: Context,
-    substance: Annotated[str, Field(description="Substance name, e.g. meth, cannabis, alcohol.", min_length=1)],
+    substance: Annotated[Optional[str], Field(description="Substance name. Blank defaults to ice.")] = None,
     amount: Annotated[Optional[float], Field(description="Quantity, e.g. 0.1", ge=0)] = None,
     unit: Annotated[Optional[str], Field(description="Unit, e.g. g, mg, ml, standard.")] = None,
     notes: Annotated[Optional[str], Field(description="Optional extra notes.")] = None,
@@ -461,11 +522,12 @@ async def loguse(
     if not session:
         return "No active session. Use /startsesh first."
 
+    substance_name = (substance or "ice").strip() or "ice"
     resp = await (
         db.table(LOG_TABLE)
         .insert({
             "session_id": session["id"],
-            "substance": substance,
+            "substance": substance_name,
             "amount": amount,
             "unit": unit,
             "notes": notes,
@@ -476,11 +538,13 @@ async def loguse(
     )
     entry = resp.data
     amount_str = f"{amount} {unit or ''}".strip() if amount is not None else "—"
+    await log_tracker_output(db, session["id"], f"Use logged: {substance_name} {amount_str}".strip(), "usage")
     return "\n".join(filter(None, [
         "✅  Use logged.",
-        f"  Substance  : {substance}",
+        f"  Substance  : {substance_name}",
         f"  Amount     : {amount_str}",
         f"  Notes      : {notes}" if notes else None,
+        f"  Session    : {session_label(session)}",
         f"  Logged at  : {fmt(entry.get('logged_at'))}",
         f"  Log ID     : {entry['id']}",
     ]))
@@ -501,6 +565,10 @@ async def createincident(
     occurred_at: Annotated[Optional[str], Field(description="ISO datetime. Blank = now.")] = None,
     personal_notes: Annotated[Optional[str], Field(description="Private notes (sensitive field).")] = None,
     notes: Annotated[Optional[str], Field(description="General notes.")] = None,
+    location: Annotated[Optional[str], Field(description="Where it happened.")] = None,
+    people_involved: Annotated[Optional[str], Field(description="Comma-separated people involved.")] = None,
+    professional_note: Annotated[Optional[str], Field(description="Note for counsellor or lawyer.")] = None,
+    outcome: Annotated[Optional[str], Field(description="What happened after / outcome.")] = None,
     substance_use: Annotated[Optional[str], Field(description="'no', 'yes', or 'comedown'.")] = None,
     names_involved: Annotated[Optional[str], Field(description="Names of people involved (freetext).")] = None,
     is_sensitive: Annotated[bool, Field(description="Mark as sensitive (hidden from viewer role).")] = False,
@@ -523,12 +591,101 @@ async def createincident(
     if substance_use and substance_use not in ("no", "yes", "comedown"):
         return "substance_use must be 'no', 'yes', or 'comedown'."
 
+    people = [p.strip() for p in (people_involved or "").split(",") if p.strip()]
+    field_visibility = {
+        "description": "viewer+",
+        "notes": "viewer+",
+        "personal_notes": "counsellor+",
+        "professional_note": "counsellor+",
+        "location": "viewer+",
+        "people_involved": "viewer+",
+        "outcome": "viewer+",
+    }
+
     # Auto-link to current session
     session_id: str | None = None
+    linked_session: dict | None = None
     if link_session:
         session = await current_session(db, uid)
         if session:
             session_id = session["id"]
+            linked_session = session
+
+    incident_payload = {
+        "user_id": uid,
+        "occurred_at": event_time,
+        "severity": severity,
+        "description": description,
+        "location": location,
+        "personal_notes": personal_notes,
+        "notes": notes,
+        "professional_note": professional_note,
+        "outcome": outcome,
+        "is_sensitive": is_sensitive,
+        "substance_use": substance_use,
+        "names_involved": names_involved,
+        "people_involved": people,
+        "field_visibility": field_visibility,
+        "emergency_services": emergency_services,
+        "police_called": police_called,
+        "ambulance_called": ambulance_called,
+        "was_arrested": was_arrested,
+        "was_sectioned": was_sectioned,
+        "tracker_session_id": session_id,
+    }
+    legacy_incident_payload = {
+        key: value
+        for key, value in incident_payload.items()
+        if key not in {"location", "professional_note", "outcome", "field_visibility"}
+    }
+
+    try:
+        resp = await (
+            db.table(INCIDENT_TABLE)
+            .insert(incident_payload)
+            .select("*")
+            .single()
+            .execute()
+        )
+    except Exception:
+        resp = await (
+            db.table(INCIDENT_TABLE)
+            .insert(legacy_incident_payload)
+            .select("*")
+            .single()
+            .execute()
+        )
+
+    inc = resp.data
+    flags = [k for k, v in {
+        "emergency_services": emergency_services,
+        "police_called": police_called,
+        "ambulance_called": ambulance_called,
+        "was_arrested": was_arrested,
+        "was_sectioned": was_sectioned,
+    }.items() if v]
+    if session_id:
+        await log_tracker_output(
+            db,
+            session_id,
+            f"Created {incident_label(inc)}: {description}",
+            "incident",
+            inc.get("id"),
+        )
+
+    return "\n".join(filter(None, [
+        "✅  Incident created.",
+        f"  Incident     : {incident_label(inc)}",
+        f"  Occurred     : {fmt(event_time)}",
+        f"  Severity     : {severity}/10",
+        f"  Description  : {description}",
+        f"  Location     : {location}" if location else None,
+        f"  People       : {', '.join(people)}" if people else None,
+        f"  Outcome      : {outcome}" if outcome else None,
+        f"  Session link : {session_label(linked_session) if linked_session else (session_id or '—')}",
+        f"  Flags        : {', '.join(flags)}" if flags else None,
+        f"  Sensitive    : {'yes' if is_sensitive else 'no'}",
+    ]))
 
     resp = await (
         db.table(INCIDENT_TABLE)
@@ -537,11 +694,16 @@ async def createincident(
             "occurred_at": event_time,
             "severity": severity,
             "description": description,
+            "location": location,
             "personal_notes": personal_notes,
             "notes": notes,
+            "professional_note": professional_note,
+            "outcome": outcome,
             "is_sensitive": is_sensitive,
             "substance_use": substance_use,
             "names_involved": names_involved,
+            "people_involved": people,
+            "field_visibility": field_visibility,
             "emergency_services": emergency_services,
             "police_called": police_called,
             "ambulance_called": ambulance_called,
@@ -564,10 +726,13 @@ async def createincident(
 
     return "\n".join(filter(None, [
         "✅  Incident created.",
-        f"  Incident ID  : {inc['id']}",
+        f"  Incident     : {incident_label(inc)}",
         f"  Occurred     : {fmt(event_time)}",
         f"  Severity     : {severity}/10",
         f"  Description  : {description}",
+        f"  Location     : {location}" if location else None,
+        f"  People       : {', '.join(people)}" if people else None,
+        f"  Outcome      : {outcome}" if outcome else None,
         f"  Session link : {session_id or '—'}",
         f"  Flags        : {', '.join(flags)}" if flags else None,
         f"  Sensitive    : {'yes' if is_sensitive else 'no'}",
@@ -606,7 +771,7 @@ async def seshinfo(ctx: Context) -> str:
     # Incidents linked to this session
     inc_resp = await (
         db.table(INCIDENT_TABLE)
-        .select("id, severity, occurred_at, description")
+        .select("id, incident_number, severity, occurred_at, description")
         .eq("tracker_session_id", session["id"])
         .order("occurred_at", desc=False)
         .execute()
@@ -615,6 +780,7 @@ async def seshinfo(ctx: Context) -> str:
 
     lines = [
         "━━━  SESSION REPORT  ━━━",
+        f"  Session      : {session_label(session)}",
         f"  ID           : {session['id']}",
         f"  Status       : active",
         f"  Started      : {fmt(get_start_iso(session, events))}",
@@ -631,7 +797,7 @@ async def seshinfo(ctx: Context) -> str:
     if incidents:
         lines += ["", "Linked incidents:"]
         for i in incidents:
-            lines.append(f"  [{i['severity']}/10] {fmt(i.get('occurred_at'))}  {i['description'][:60]}")
+            lines.append(f"  {incident_label(i)} [{i['severity']}/10] {fmt(i.get('occurred_at'))}  {i['description'][:60]}")
 
     return "\n".join(lines)
 
@@ -670,6 +836,7 @@ async def seshlist(
         events = parse_events(s.get("notes"))
         status = "stopped" if is_stopped(s) else "active"
         lines.append(
+            f"  {session_label(s)}"
             f"  {fmt(get_start_iso(s, events))}"
             f"  [{status}]"
             f"  {ms_to_human(duration_ms(s))}"
@@ -728,6 +895,7 @@ async def seshexport(
 
     lines = [
         "━━━  SESSION EXPORT  ━━━",
+        f"  Session      : {session_label(session)}",
         f"  Session ID   : {session['id']}",
         f"  Status       : {'stopped' if is_stopped(session) else 'active'}",
         f"  Date start   : {session.get('date_start')}",
@@ -842,9 +1010,10 @@ Incidents:
   /createincident           Log a mental health incident.
     Required: severity (1-10), description
     Optional: occurred_at, personal_notes, notes, substance_use,
-              names_involved, is_sensitive, emergency_services,
-              police_called, ambulance_called, was_arrested,
-              was_sectioned, link_session
+              names_involved, location, people_involved,
+              professional_note, outcome, is_sensitive,
+              emergency_services, police_called, ambulance_called,
+              was_arrested, was_sectioned, link_session
 
   /help                     This message.
 

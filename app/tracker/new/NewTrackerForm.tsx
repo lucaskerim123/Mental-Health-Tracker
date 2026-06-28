@@ -12,6 +12,9 @@ export default function NewTrackerForm() {
   const [form, setForm] = useState({
     date_start: today,
     any_incidents: '',
+    brief_notes: '',
+    counsellor_notes: '',
+    lawyer_notes: '',
     personal_reflection: '',
     notes: '',
     is_sensitive: false,
@@ -38,12 +41,28 @@ export default function NewTrackerForm() {
     setSaving(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const { error, data } = await supabase.from('drug_tracker_sessions').insert({
+    const payload = {
       ...form,
       user_id: user!.id,
       sleep_hours: 0,
       sensitive_fields: sensitiveFields,
-    }).select().single()
+    }
+    let { error, data } = await supabase.from('drug_tracker_sessions').insert(payload).select().single()
+    if (error) {
+      const fallbackPayload = {
+        date_start: payload.date_start,
+        any_incidents: payload.any_incidents,
+        personal_reflection: payload.personal_reflection,
+        notes: payload.notes,
+        is_sensitive: payload.is_sensitive,
+        user_id: payload.user_id,
+        sleep_hours: payload.sleep_hours,
+        sensitive_fields: payload.sensitive_fields,
+      }
+      const fallback = await supabase.from('drug_tracker_sessions').insert(fallbackPayload).select().single()
+      error = fallback.error
+      data = fallback.data
+    }
 
     if (error) { toast.error('Failed: ' + error.message); setSaving(false); return }
     toast.success('Session started.')
@@ -59,6 +78,10 @@ export default function NewTrackerForm() {
       <LockableField label="Any Incidents" field="any_incidents" isSensitive={isSensitive} toggle={toggleSensitiveField}>
         <textarea value={form.any_incidents} onChange={e => set('any_incidents', e.target.value)} rows={3} className="vault-input resize-none" />
       </LockableField>
+      <div className="space-y-1.5">
+        <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Brief Notes</label>
+        <textarea value={form.brief_notes} onChange={e => set('brief_notes', e.target.value)} rows={3} className="vault-input resize-none" />
+      </div>
       <div className="space-y-1.5">
         <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Personal Reflection (always restricted to counsellors+)</label>
         <textarea value={form.personal_reflection} onChange={e => set('personal_reflection', e.target.value)} rows={5} placeholder="Private reflections — visible to counsellors only" className="vault-input resize-none" />

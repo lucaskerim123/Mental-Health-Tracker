@@ -4,6 +4,7 @@ import { ArrowLeft, TimerReset } from 'lucide-react'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { daysUp, formatDate } from '@/lib/utils'
+import { sessionLabel } from '@/lib/sessions'
 
 export default async function MobileSessionsPage() {
   const profile = await getProfile()
@@ -12,7 +13,7 @@ export default async function MobileSessionsPage() {
   const supabase = await createClient()
   const { data: sessions } = await supabase
     .from('drug_tracker_sessions')
-    .select('id, date_start, date_end, sleep_hours, any_incidents')
+    .select('id, session_number, date_start, date_end, sleep_hours, any_incidents')
     .order('date_start', { ascending: false })
     .limit(50)
 
@@ -38,7 +39,7 @@ export default async function MobileSessionsPage() {
           {sessions?.length ? sessions.map(session => (
             <Link key={session.id} href={`/mobile/sessions/${session.id}`} className="block rounded-[1.75rem] border border-zinc-800 bg-zinc-950 p-4 active:scale-[0.99]">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="text-[10px] font-mono text-zinc-500">{formatDate(session.date_start)}</span>
+                <span className="text-[10px] font-mono text-zinc-500">{sessionLabel(session)} - {formatDate(session.date_start)}</span>
                 <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] font-mono text-zinc-400">{session.date_end ? 'Closed' : 'Open'}</span>
               </div>
               <p className="text-2xl font-semibold text-zinc-100">Day {daysUp(session.date_start, session.date_end)}</p>

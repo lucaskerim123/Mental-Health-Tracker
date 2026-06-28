@@ -14,7 +14,7 @@ interface NavbarProps {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/incidents', label: 'Incidents', icon: Activity },
-  { href: '/tracker', label: 'Tracker', icon: Pill },
+  { href: '/tracker', label: 'Session Tracker', icon: Pill },
   { href: '/documents', label: 'Documents', icon: FileText },
 ]
 

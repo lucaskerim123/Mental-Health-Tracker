@@ -15,6 +15,7 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
     { data: sleepLog },
     { data: drugUseLog },
     { data: linkedIncidents },
+    { data: availableIncidents },
     { data: entries },
     { data: sessionEvents },
     { data: sessionMoods },
@@ -24,9 +25,14 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
     supabase.from('sleep_log').select('*').eq('session_id', id).order('logged_at', { ascending: false }),
     supabase.from('drug_use_log').select('*').eq('session_id', id).order('logged_at', { ascending: false }),
     supabase.from('mental_health_incidents')
-      .select('id, occurred_at, severity, description, is_sensitive, police_called, ambulance_called, was_arrested, was_sectioned')
+      .select('id, incident_number, occurred_at, severity, description, is_sensitive, sensitive_fields, field_visibility, police_called, ambulance_called, was_arrested, was_sectioned')
       .eq('tracker_session_id', id)
       .order('occurred_at', { ascending: true }),
+    supabase.from('mental_health_incidents')
+      .select('id, incident_number, occurred_at, severity, description, is_sensitive, sensitive_fields, field_visibility, police_called, ambulance_called, was_arrested, was_sectioned')
+      .is('tracker_session_id', null)
+      .order('occurred_at', { ascending: false })
+      .limit(50),
     supabase.from('tracker_entries').select('*').eq('session_id', id).order('created_at', { ascending: false }),
     supabase.from('session_events').select('*').eq('session_id', id).order('occurred_at', { ascending: true }),
     supabase.from('session_moods').select('*').eq('session_id', id).order('occurred_at', { ascending: true }),
@@ -59,10 +65,12 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
           sleepLog={sleepLog ?? []}
           drugUseLog={drugUseLog ?? []}
           linkedIncidents={linkedIncidents ?? []}
+          availableIncidents={availableIncidents ?? []}
           entries={entries ?? []}
           sessionEvents={sessionEvents ?? []}
           sessionMoods={sessionMoods ?? []}
           sessionNotes={sessionNotes ?? []}
+          role={profile.role}
           isAdmin={isAdmin}
           canViewSensitive={canViewSensitive}
         />
