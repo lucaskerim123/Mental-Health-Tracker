@@ -18,6 +18,15 @@ function generateToken(): string {
   return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('')
 }
 
+function inviteMessage(url: string) {
+  return `You have been invited to Luke's tracker.
+
+To join, open the tracker app/site and use the padlock access/join option. Paste this invite link there when asked.
+
+If all else fails, please use the URL:
+${url}`
+}
+
 export default function InvitesClient({ invites: initialInvites, adminId }: Props) {
   const [invites, setInvites] = useState(initialInvites)
   const [role, setRole] = useState<Role>('viewer')
@@ -47,8 +56,8 @@ export default function InvitesClient({ invites: initialInvites, adminId }: Prop
 
   function copyLink(token: string) {
     const url = `${window.location.origin}/join?token=${token}`
-    navigator.clipboard.writeText(url)
-    toast.success('Link copied.')
+    navigator.clipboard.writeText(inviteMessage(url))
+    toast.success('Invite message copied.')
   }
 
   return (
@@ -60,6 +69,7 @@ export default function InvitesClient({ invites: initialInvites, adminId }: Prop
             <label className="text-[10px] font-mono text-zinc-600 tracking-widest uppercase">Role</label>
             <select value={role} onChange={e => setRole(e.target.value as Role)} className="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[11px] font-mono px-3 py-2 focus:outline-none">
               <option value="viewer">viewer</option>
+              <option value="lawyer">lawyer</option>
               <option value="counsellor">counsellor</option>
             </select>
           </div>
