@@ -21,20 +21,32 @@ function generateToken(): string {
 function inviteMessage(url: string, token: string) {
   const siteUrl = window.location.origin
 
-   return `"Not all doors are seen—only found by those who know where not to look."
+   return `ACCESS DROP — PRIVATE ENTRY
 
-A door stands ajar. It was not meant for all eyes.
-Seek Luke’s tracker: ${siteUrl} — but do not approach as others would.
-The front is watched.
+The vault stirs… but it does not welcome the unworthy.
+What you seek is not behind the door you see — it waits beneath the one you overlook.
 
-Where iron sleeps, a lock awaits. When it whispers for its key, answer in the place carved for it.
+Luke’s tracker is sealed beyond: <siteurl>
 
-Thy code: ${token}
+The first door is not opened by the path in front of you.
+Look for what the vault hides in plain sight.
 
-This passage is fleeting. Speak of it to none.
+Wake the mechanism.
 
-Should the path collapse, fall back to this:
-${url}`
+When the door gives way, do not stop there.
+The real entry is guarded by the seal.
+
+Press the lock.
+Let the hidden panel surface.
+
+When it asks for proof, enter the code.
+
+CODE: <code>
+
+This access is temporary. Keep it quiet.
+
+If the vault refuses you, use the fallback:
+<invite URL>`
 }
 
 export default function InvitesClient({ invites: initialInvites, adminId }: Props) {
