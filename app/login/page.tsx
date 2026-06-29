@@ -57,9 +57,9 @@ export default function LoginPage() {
             type="button"
             onClick={() => setVaultOpen(true)}
             aria-label="Open login panel"
-            className="group absolute left-[56%] top-[27%] h-[28%] w-[22%] rounded-[28px] outline-none sm:left-[55%] sm:top-[31%] sm:h-[26%] sm:w-[13%]"
+            className="group absolute left-[66%] top-[27%] h-[20%] w-[21%] rounded-[22px] outline-none sm:left-[60%] sm:top-[28%] sm:h-[26%] sm:w-[12%] lg:left-[61%] lg:top-[33%] lg:h-[28%] lg:w-[10%]"
           >
-            <span className="absolute inset-0 rounded-[28px] border border-blue-400/10 bg-blue-950/5 opacity-20 transition-all group-hover:border-blue-300/65 group-hover:bg-blue-500/10 group-hover:opacity-75 group-hover:shadow-[0_0_55px_rgba(37,99,235,.34)]" />
+            <span className="absolute inset-0 rounded-[22px] border border-blue-400/10 bg-blue-950/5 opacity-20 transition-all group-hover:border-blue-300/65 group-hover:bg-blue-500/10 group-hover:opacity-75 group-hover:shadow-[0_0_55px_rgba(37,99,235,.34)]" />
           </button>
         )}
 
