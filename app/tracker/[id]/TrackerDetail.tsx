@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDate, formatDateTime, daysUp } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Plus, Trash2, Edit2, X, Check, StopCircle, Lock } from 'lucide-react'
-import type { DrugTrackerSession, SleepLog, DrugUseLog, TrackerEntry, IncidentFieldVisibility, Role, FieldVisibilityLevel } from '@/lib/supabase/types'
+import type { DrugTrackerSession, SleepLog, DrugUseLog, TrackerEntry, IncidentFieldVisibility, Role } from '@/lib/supabase/types'
 import { incidentLabel, visibleIncidentText } from '@/lib/incidents'
 import {
   canViewSessionField,
@@ -90,6 +90,9 @@ export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDr
   const [showUsageInput, setShowUsageInput] = useState(false)
   const [usageForm, setUsageForm] = useState({ substance: 'ice', amount: '', unit: '', notes: '' })
   const [addingUsage, setAddingUsage] = useState(false)
+  const [editingUsageId, setEditingUsageId] = useState<string | null>(null)
+  const [editingUsageForm, setEditingUsageForm] = useState({ substance: '', amount: '', unit: '', notes: '' })
+  const [savingUsage, setSavingUsage] = useState(false)
 
   const [entries, setEntries] = useState<TrackerEntry[]>(initialEntries)
   const [showEntryInput, setShowEntryInput] = useState(false)
@@ -137,6 +140,41 @@ export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDr
 
   function isSensitive(field: string) {
     return sensitiveFields.includes(field)
+  }
+
+  function startEditUsageEntry(entry: DrugUseLog) {
+    setEditingUsageId(entry.id)
+    setEditingUsageForm({
+      substance: entry.substance ?? 'ice',
+      amount: entry.amount != null ? String(entry.amount) : '',
+      unit: entry.unit ?? '',
+      notes: entry.notes ?? '',
+    })
+  }
+
+  function cancelEditUsageEntry() {
+    setEditingUsageId(null)
+    setEditingUsageForm({ substance: '', amount: '', unit: '', notes: '' })
+  }
+
+  async function saveUsageEntry(id: string) {
+    if (!editingUsageForm.substance.trim()) { toast.error('Substance is required.'); return }
+    setSavingUsage(true)
+    const supabase = createClient()
+    const payload = {
+      substance: editingUsageForm.substance.trim(),
+      amount: editingUsageForm.amount ? parseFloat(editingUsageForm.amount) : null,
+      unit: editingUsageForm.unit.trim() || null,
+      notes: editingUsageForm.notes.trim() || null,
+    }
+    const { data, error } = await supabase.from('drug_use_log').update(payload).eq('id', id).select().single()
+    if (error) toast.error('Failed to update usage entry.')
+    else {
+      setDrugUseLog(prev => prev.map(entry => entry.id === id ? { ...entry, ...(data ?? {}), ...payload } : entry))
+      cancelEditUsageEntry()
+      toast.success('Usage entry updated.')
+    }
+    setSavingUsage(false)
   }
 
   function startEditEntry(entry: TrackerEntry) {
@@ -489,7 +527,35 @@ export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDr
               <ButtonRow><button onClick={addUsage} disabled={addingUsage} className="action-button red">{addingUsage ? '...' : 'Log'}</button><button onClick={() => setShowUsageInput(false)} className="ghost-button">Cancel</button></ButtonRow>
             </div>
           )}
-          {canViewSessionField(role, s, 'usage_log') && drugUseLog.length > 0 ? <div className="space-y-1.5">{drugUseLog.map(entry => <div key={entry.id} className="entry-card flex items-start justify-between gap-3 text-[11px] font-mono"><div className="min-w-0"><span className="text-zinc-300">{entry.substance}</span>{(entry.amount != null || entry.unit) && <span className="text-zinc-500 ml-2">{entry.amount != null ? entry.amount : ''}{entry.unit ? ` ${entry.unit}` : ''}</span>}{entry.notes && <p className="text-zinc-600 mt-0.5 text-[10px] whitespace-pre-wrap">{entry.notes}</p>}<p className="text-zinc-700 mt-0.5 text-[10px]">{formatDateTime(entry.logged_at)}</p></div>{isAdmin && <button onClick={() => deleteUsageEntry(entry.id)} className="icon-danger"><X className="w-3 h-3" /></button>}</div>)}</div> : canViewSessionField(role, s, 'usage_log') ? <Empty text="No usage logged yet." /> : null}
+          {canViewSessionField(role, s, 'usage_log') && drugUseLog.length > 0 ? (
+            <div className="space-y-1.5">
+              {drugUseLog.map(entry => (
+                <div key={entry.id} className="entry-card text-[11px] font-mono">
+                  {editingUsageId === entry.id ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <Field label="Substance"><input type="text" value={editingUsageForm.substance} onChange={e => setEditingUsageForm(f => ({ ...f, substance: e.target.value }))} className="vault-input text-sm" autoFocus /></Field>
+                        <Field label="Amount"><input type="number" step="any" min="0" value={editingUsageForm.amount} onChange={e => setEditingUsageForm(f => ({ ...f, amount: e.target.value }))} className="vault-input text-sm" /></Field>
+                        <Field label="Unit"><input type="text" value={editingUsageForm.unit} onChange={e => setEditingUsageForm(f => ({ ...f, unit: e.target.value }))} className="vault-input text-sm" /></Field>
+                      </div>
+                      <Field label="Notes"><input type="text" value={editingUsageForm.notes} onChange={e => setEditingUsageForm(f => ({ ...f, notes: e.target.value }))} className="vault-input text-sm" /></Field>
+                      <ButtonRow><button onClick={() => saveUsageEntry(entry.id)} disabled={savingUsage} className="action-button red">{savingUsage ? 'Saving...' : 'Save'}</button><button onClick={cancelEditUsageEntry} className="ghost-button">Cancel</button></ButtonRow>
+                    </div>
+                  ) : (
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="text-zinc-300">{entry.substance}</span>
+                        {(entry.amount != null || entry.unit) && <span className="text-zinc-500 ml-2">{entry.amount != null ? entry.amount : ''}{entry.unit ? ` ${entry.unit}` : ''}</span>}
+                        {entry.notes && <p className="text-zinc-600 mt-0.5 text-[10px] whitespace-pre-wrap">{entry.notes}</p>}
+                        <p className="text-zinc-700 mt-0.5 text-[10px]">{formatDateTime(entry.logged_at)}</p>
+                      </div>
+                      {isAdmin && <div className="flex items-center gap-2 shrink-0"><button onClick={() => startEditUsageEntry(entry)} className="icon-button"><Edit2 className="w-3 h-3" /></button><button onClick={() => deleteUsageEntry(entry.id)} className="icon-danger"><X className="w-3 h-3" /></button></div>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : canViewSessionField(role, s, 'usage_log') ? <Empty text="No usage logged yet." /> : null}
         </Panel>
       )}
 
