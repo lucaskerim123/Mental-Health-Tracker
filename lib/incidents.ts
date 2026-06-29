@@ -30,8 +30,8 @@ export const DEFAULT_INCIDENT_FIELD_VISIBILITY: Record<IncidentFieldKey, FieldVi
 
 export const INCIDENT_VISIBILITY_OPTIONS: FieldVisibilityLevel[] = [
   'viewer+',
-  'counsellor+',
   'lawyer+',
+  'counsellor+',
   'admin only',
 ]
 
@@ -56,7 +56,7 @@ export function canViewVisibilityLevel(role: Role, level: FieldVisibilityLevel) 
   if (role === 'admin') return true
   if (level === 'viewer+') return true
   if (level === 'counsellor+') return role === 'counsellor'
-  if (level === 'lawyer+') return false
+  if (level === 'lawyer+') return role === 'lawyer'
   return false
 }
 
