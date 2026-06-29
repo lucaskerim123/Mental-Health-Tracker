@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, KeyRound, Lock, ShieldAlert } from 'lucide-react'
@@ -12,9 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
   const [inviteVisible, setInviteVisible] = useState(false)
-  const [inviteHolding, setInviteHolding] = useState(false)
   const [inviteCode, setInviteCode] = useState('')
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
 
   function getRedirectPath() {
@@ -46,25 +44,8 @@ export default function LoginPage() {
     router.push(`/join?token=${encodeURIComponent(code)}`)
   }
 
-  function startInviteHold() {
-    if (inviteVisible) return
-    setInviteHolding(true)
-    if (holdTimer.current) clearTimeout(holdTimer.current)
-    holdTimer.current = setTimeout(() => {
-      setInviteHolding(false)
-      setInviteVisible(true)
-      holdTimer.current = null
-    }, 3000)
-  }
-
-  function cancelInviteHold() {
-    if (holdTimer.current) clearTimeout(holdTimer.current)
-    holdTimer.current = null
-    setInviteHolding(false)
-  }
-
   return (
-    <main className="relative min-h-screen overflow-hidden bg-black text-zinc-300">
+    <main className="relative min-h-screen overflow-x-hidden bg-black text-zinc-300">
       <div className={`vault-bg vault-bg-closed transition-all duration-[1200ms] ease-out ${vaultOpen ? 'scale-110 opacity-0 blur-sm' : 'scale-100 opacity-100 blur-0'}`} />
       <div className={`vault-bg vault-bg-open transition-all duration-[1400ms] ease-out ${vaultOpen ? 'scale-100 opacity-100 blur-0' : 'scale-105 opacity-0 blur-sm'}`} />
       <div className="fixed inset-0 bg-black/35" />
@@ -73,7 +54,7 @@ export default function LoginPage() {
       <div className="fixed inset-0 bg-gradient-to-b from-black/5 via-transparent to-black" />
       <div className="fixed inset-0 opacity-[0.05] bg-[linear-gradient(rgba(255,255,255,.14)_1px,transparent_1px)] bg-[length:100%_4px]" />
 
-      <section className="relative z-10 min-h-screen px-4 py-8">
+      <section className="relative z-10 min-h-screen px-4 py-6 sm:py-8">
         {!vaultOpen && (
           <button
             type="button"
@@ -85,14 +66,19 @@ export default function LoginPage() {
           </button>
         )}
 
-        <div className={`mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl items-end transition-all duration-1000 ease-out lg:grid-cols-[1.05fr_.95fr] lg:items-center ${vaultOpen ? 'opacity-100 translate-x-0 translate-y-0 delay-500' : 'pointer-events-none opacity-0 translate-x-8 translate-y-8'}`}>
+        <div className={`mx-auto grid w-full max-w-6xl pt-[40vh] transition-all duration-1000 ease-out sm:min-h-[calc(100vh-4rem)] sm:items-end lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:pt-0 ${vaultOpen ? 'opacity-100 translate-x-0 translate-y-0 delay-500' : 'pointer-events-none opacity-0 translate-x-8 translate-y-8'}`}>
           <div className="hidden lg:block" />
 
           <div className="w-full lg:max-w-sm lg:justify-self-end">
             <div className="mb-5 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-blue-900/60 bg-black/75 shadow-[0_0_35px_rgba(37,99,235,.2)] backdrop-blur-md">
-                <Lock className="h-6 w-6 text-blue-300/80" />
-              </div>
+              <button
+                type="button"
+                onClick={() => setInviteVisible(v => !v)}
+                aria-label="Toggle hidden invite entry"
+                className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border bg-black/75 shadow-[0_0_35px_rgba(37,99,235,.2)] backdrop-blur-md transition-all ${inviteVisible ? 'border-blue-500 text-blue-300 shadow-[0_0_35px_rgba(37,99,235,.38)]' : 'border-blue-900/60 text-blue-300/80 hover:border-blue-500/80 hover:shadow-[0_0_45px_rgba(37,99,235,.34)]'}`}
+              >
+                <Lock className="h-6 w-6" />
+              </button>
               <p className="text-[10px] font-mono uppercase tracking-[0.48em] text-blue-500/80">Vault Entry</p>
               <h1 className="mt-3 text-lg font-mono uppercase tracking-[0.35em] text-zinc-200">Restricted Access</h1>
               <p className="mt-2 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600">Identity seal required</p>
@@ -104,25 +90,9 @@ export default function LoginPage() {
               <div className="absolute -bottom-px -left-px h-8 w-8 border-b border-l border-blue-900/70" />
               <div className="absolute -bottom-px -right-px h-8 w-8 border-b border-r border-blue-900/70" />
               <div className="border border-zinc-900 bg-zinc-950/72 p-5 sm:p-7">
-                <div className="mb-5 flex items-center justify-between border-b border-zinc-900 pb-4">
-                  <div className="flex items-center gap-2">
-                    <ShieldAlert className="h-4 w-4 text-blue-500/75" />
-                    <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-zinc-600">Identity Seal</span>
-                  </div>
-                  <button
-                    type="button"
-                    onMouseDown={startInviteHold}
-                    onMouseUp={cancelInviteHold}
-                    onMouseLeave={cancelInviteHold}
-                    onTouchStart={startInviteHold}
-                    onTouchEnd={cancelInviteHold}
-                    aria-label="Hold to unlock hidden invite entry"
-                    className={`group relative flex h-11 w-11 items-center justify-center rounded-full border bg-black transition-all ${inviteVisible ? 'border-blue-500 text-blue-300 shadow-[0_0_28px_rgba(37,99,235,.34)]' : 'border-zinc-900 text-zinc-800 hover:border-blue-900/70 hover:text-blue-500'}`}
-                  >
-                    <span className="absolute inset-1 rounded-full border border-zinc-900/80" />
-                    <span className={`absolute inset-0 rounded-full border border-blue-400/70 ${inviteHolding ? 'animate-hold-ring' : 'opacity-0'}`} />
-                    <Lock className="relative z-10 h-4 w-4" />
-                  </button>
+                <div className="mb-5 flex items-center gap-2 border-b border-zinc-900 pb-4">
+                  <ShieldAlert className="h-4 w-4 text-blue-500/75" />
+                  <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-zinc-600">Identity Seal</span>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -163,13 +133,13 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <p className="mt-5 text-center text-[10px] font-mono uppercase tracking-[0.28em] text-zinc-700">Public Entry Disabled</p>
+            <p className="mt-5 pb-8 text-center text-[10px] font-mono uppercase tracking-[0.28em] text-zinc-700">Public Entry Disabled</p>
           </div>
         </div>
       </section>
 
       <style jsx global>{`
-        .vault-bg{position:fixed;inset:0;background-size:cover;background-position:center top;background-repeat:no-repeat}.vault-bg-closed{background-image:url('/vault-door.jpg')}.vault-bg-open{background-image:url('/vault-door-open.jpg')}.vault-input-blue{width:100%;background:#020202;border:1px solid rgb(39 39 42);color:rgb(228 228 231);padding:.7rem .8rem;font-size:.875rem;font-family:monospace;outline:none;transition:border-color .18s,box-shadow .18s,background .18s}.vault-input-blue:focus{border-color:rgba(37,99,235,.82);box-shadow:0 0 0 1px rgba(37,99,235,.3),0 0 26px rgba(37,99,235,.13);background:#000}.vault-input-blue::placeholder{color:rgb(63 63 70)}@media (min-width:768px){.vault-bg{background-position:center center}}@keyframes vaultFlash{0%{opacity:0}22%{opacity:.18}100%{opacity:0}}.animate-vault-flash{animation:vaultFlash 900ms ease-out forwards}@keyframes holdRing{0%{clip-path:inset(0 100% 0 0);opacity:.2}100%{clip-path:inset(0 0 0 0);opacity:1}}.animate-hold-ring{animation:holdRing 3000ms linear forwards}
+        .vault-bg{position:fixed;inset:0;background-size:cover;background-position:center top;background-repeat:no-repeat}.vault-bg-closed{background-image:url('/vault-door.jpg')}.vault-bg-open{background-image:url('/vault-door-open.jpg');background-size:auto 43vh;background-position:center top}.vault-input-blue{width:100%;background:#020202;border:1px solid rgb(39 39 42);color:rgb(228 228 231);padding:.7rem .8rem;font-size:.875rem;font-family:monospace;outline:none;transition:border-color .18s,box-shadow .18s,background .18s}.vault-input-blue:focus{border-color:rgba(37,99,235,.82);box-shadow:0 0 0 1px rgba(37,99,235,.3),0 0 26px rgba(37,99,235,.13);background:#000}.vault-input-blue::placeholder{color:rgb(63 63 70)}@media (min-width:768px){.vault-bg{background-size:cover;background-position:center center}}@keyframes vaultFlash{0%{opacity:0}22%{opacity:.18}100%{opacity:0}}.animate-vault-flash{animation:vaultFlash 900ms ease-out forwards}
       `}</style>
     </main>
   )
