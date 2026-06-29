@@ -415,7 +415,6 @@ export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDr
     setSaving(true)
     const supabase = createClient()
     const updatePayload = {
-      any_incidents: s.any_incidents,
       brief_notes: s.brief_notes,
       counsellor_notes: s.counsellor_notes,
       lawyer_notes: s.lawyer_notes,
@@ -428,7 +427,6 @@ export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDr
     let { error } = await supabase.from('drug_tracker_sessions').update(updatePayload).eq('id', s.id)
     if (error) {
       const fallbackPayload = {
-        any_incidents: s.any_incidents,
         personal_reflection: s.personal_reflection,
         notes: s.notes,
         is_sensitive: s.is_sensitive,
@@ -622,7 +620,6 @@ export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDr
         {editing ? (
           <div className="space-y-5">
             <TextAreaField label="Brief notes" value={s.brief_notes ?? ''} onChange={value => setS(prev => ({ ...prev, brief_notes: value }))} rows={3} />
-            <LockableField label="Any Incidents" field="any_incidents" isSensitive={isSensitive} toggle={toggleSensitiveField} showToggle={isAdmin}><textarea value={s.any_incidents ?? ''} onChange={e => setS(prev => ({ ...prev, any_incidents: e.target.value }))} rows={3} className="vault-input w-full resize-none" /></LockableField>
             <TextAreaField label="Notes (public)" value={s.notes ?? ''} onChange={value => setS(prev => ({ ...prev, notes: value }))} rows={3} />
             {canViewSensitive && <TextAreaField label="Private Notes" value={s.personal_reflection ?? ''} onChange={value => setS(prev => ({ ...prev, personal_reflection: value }))} rows={6} />}
             <TextAreaField label="Counsellor notes" value={s.counsellor_notes ?? ''} onChange={value => setS(prev => ({ ...prev, counsellor_notes: value }))} rows={4} />
@@ -632,7 +629,6 @@ export default function TrackerDetail({ session, sleepLog, drugUseLog: initialDr
         ) : (
           <div className="space-y-5">
             {s.brief_notes && <ReadField label="Brief notes" restricted={isRestrictedSessionField(role, s, 'brief_notes')}>{visibleSessionText(role, s, 'brief_notes', s.brief_notes)}</ReadField>}
-            {s.any_incidents && <ReadField label="Any Incidents" restricted={isSensitive('any_incidents')}>{s.any_incidents}</ReadField>}
             {s.notes && <ReadField label="Notes" restricted={isRestrictedSessionField(role, s, 'notes')}>{visibleSessionText(role, s, 'notes', s.notes)}</ReadField>}
             {s.counsellor_notes && <ReadField label="Counsellor notes" restricted={isRestrictedSessionField(role, s, 'counsellor_notes')}>{visibleSessionText(role, s, 'counsellor_notes', s.counsellor_notes)}</ReadField>}
             {s.lawyer_notes && <ReadField label="Lawyer notes" restricted={isRestrictedSessionField(role, s, 'lawyer_notes')}>{visibleSessionText(role, s, 'lawyer_notes', s.lawyer_notes)}</ReadField>}
