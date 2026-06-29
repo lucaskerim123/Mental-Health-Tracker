@@ -26,7 +26,7 @@ function inviteMessage(url: string, token: string) {
 The vault stirs… but it does not welcome the unworthy.
 What you seek is not behind the door you see — it waits beneath the one you overlook.
 
-Luke’s tracker is sealed beyond: <siteurl>
+Luke’s tracker is sealed beyond: ${siteUrl}
 
 The first door is not opened by the path in front of you.
 Look for what the vault hides in plain sight.
@@ -41,12 +41,12 @@ Let the hidden panel surface.
 
 When it asks for proof, enter the code.
 
-CODE: <code>
+CODE: ${token}
 
 This access is temporary. Keep it quiet.
 
 If the vault refuses you, use the fallback:
-<invite URL>`
+${url}`
 }
 
 export default function InvitesClient({ invites: initialInvites, adminId }: Props) {
