@@ -28,12 +28,44 @@
 
 * {
   border-color: hsl(var(--border));
+  min-width: 0;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: 'Space Grotesk', 'Geist', monospace;
+}
+
+img,
+svg,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+a,
+label,
+button,
+textarea,
+input,
+select {
+  overflow-wrap: anywhere;
 }
 
 /* Vault glow effect */
@@ -59,9 +91,9 @@ body {
 
 @layer utilities {
   .vault-input {
-    @apply w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-red-900/60 transition-colors;
+    @apply w-full max-w-full min-w-0 bg-black border border-zinc-800 text-zinc-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-red-900/60 transition-colors;
   }
   .phone-input {
-    @apply w-full rounded-2xl border border-zinc-800 bg-black px-4 py-4 text-base text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-zinc-600 transition-colors;
+    @apply w-full max-w-full min-w-0 rounded-2xl border border-zinc-800 bg-black px-4 py-4 text-base text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-zinc-600 transition-colors;
   }
 }
