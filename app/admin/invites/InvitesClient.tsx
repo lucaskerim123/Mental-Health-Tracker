@@ -21,18 +21,19 @@ function generateToken(): string {
 function inviteMessage(url: string, token: string) {
   const siteUrl = window.location.origin
 
-  return `PRIVATE ENTRY
+   return `"Not all doors are seen—only found by those who know where not to look."
 
-A door has been left ajar.
+A door stands ajar. It was not meant for all eyes.
+Seek Luke’s tracker: ${siteUrl} — but do not approach as others would.
+The front is watched.
 
-Seek Luke's tracker: ${siteUrl}
-Use the padlock entry. When it asks for the key, place the code in the space carved for it.
+Where iron sleeps, a lock awaits. When it whispers for its key, answer in the place carved for it.
 
 Thy code: ${token}
 
-This passage is fleeting.
+This passage is fleeting. Speak of it to none.
 
-If all else fails, please use the URL:
+Should the path collapse, fall back to this:
 ${url}`
 }
 
