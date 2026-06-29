@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "mental-health-incident-system": {
-      "command": "python3",
+    "his": {
+      "command": "python",
       "args": ["mcp/his-py/server.py"]
     }
   }

@@ -14,12 +14,20 @@ Env vars required:
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 # Load .env.local then .env so credentials work without exporting shell vars
 try:
     from dotenv import load_dotenv
-    load_dotenv(".env.local", override=False)
-    load_dotenv(".env", override=False)
+    BASE_DIR = Path(__file__).resolve().parent
+    ROOT_DIR = BASE_DIR.parents[1]
+    for env_path in (
+        BASE_DIR / ".env.local",
+        BASE_DIR / ".env",
+        ROOT_DIR / ".env.local",
+        ROOT_DIR / ".env",
+    ):
+        load_dotenv(env_path, override=False)
 except ImportError:
     pass  # python-dotenv not installed; rely on environment variables
 import re
@@ -32,6 +40,7 @@ from zoneinfo import ZoneInfo
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
 from supabase import AsyncClient, acreate_client
+from lockdown_tool import register_lockdown_tool
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -74,6 +83,7 @@ async def lifespan(server: FastMCP):
     yield {"db": db, "uid": _require_env("HIS_USER_ID")}
 
 mcp = FastMCP("his_mcp", lifespan=lifespan)
+register_lockdown_tool(mcp)
 
 # ---------------------------------------------------------------------------
 # Time helpers
@@ -1032,4 +1042,3 @@ if __name__ == "__main__":
         mcp.run(transport="streamable-http", port=port)
     else:
         mcp.run(transport="stdio")
-

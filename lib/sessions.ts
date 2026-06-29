@@ -9,12 +9,12 @@ export const SESSION_FIELD_LABELS: Record<SessionFieldKey, string> = {
   counsellor_notes: 'Counsellor notes',
   lawyer_notes: 'Lawyer notes',
   private_notes: 'Private notes',
-  mcp_outputs: 'Log entires (outputs from mcp)',
+  mcp_outputs: 'Log entries (outputs from mcp)',
 }
 
 export const DEFAULT_SESSION_FIELD_VISIBILITY: Record<SessionFieldKey, FieldVisibilityLevel> = {
   brief_notes: 'viewer+',
-  notes: 'counsellor+',
+  notes: 'viewer+',
   usage_log: 'counsellor+',
   counsellor_notes: 'counsellor+',
   lawyer_notes: 'lawyer+',
@@ -39,6 +39,7 @@ export function canViewVisibilityLevel(role: Role, level: FieldVisibilityLevel) 
   if (role === 'admin') return true
   if (level === 'viewer+') return true
   if (level === 'counsellor+') return role === 'counsellor'
+  if (level === 'lawyer+') return role === 'lawyer'
   return false
 }
 

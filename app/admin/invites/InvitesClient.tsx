@@ -18,6 +18,25 @@ function generateToken(): string {
   return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('')
 }
 
+function inviteMessage(url: string, token: string) {
+  const siteUrl = window.location.origin
+
+   return `"Not all doors are seen—only found by those who know where not to look."
+
+A door stands ajar. It was not meant for all eyes.
+Seek Luke’s tracker: ${siteUrl} — but do not approach as others would.
+The front is watched.
+
+Where iron sleeps, a lock awaits. When it whispers for its key, answer in the place carved for it.
+
+Thy code: ${token}
+
+This passage is fleeting. Speak of it to none.
+
+Should the path collapse, fall back to this:
+${url}`
+}
+
 export default function InvitesClient({ invites: initialInvites, adminId }: Props) {
   const [invites, setInvites] = useState(initialInvites)
   const [role, setRole] = useState<Role>('viewer')
@@ -47,8 +66,8 @@ export default function InvitesClient({ invites: initialInvites, adminId }: Prop
 
   function copyLink(token: string) {
     const url = `${window.location.origin}/join?token=${token}`
-    navigator.clipboard.writeText(url)
-    toast.success('Link copied.')
+    navigator.clipboard.writeText(inviteMessage(url, token))
+    toast.success('Invite message copied.')
   }
 
   return (
@@ -60,6 +79,7 @@ export default function InvitesClient({ invites: initialInvites, adminId }: Prop
             <label className="text-[10px] font-mono text-zinc-600 tracking-widest uppercase">Role</label>
             <select value={role} onChange={e => setRole(e.target.value as Role)} className="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[11px] font-mono px-3 py-2 focus:outline-none">
               <option value="viewer">viewer</option>
+              <option value="lawyer">lawyer</option>
               <option value="counsellor">counsellor</option>
             </select>
           </div>

@@ -2,6 +2,50 @@
 
 Basic private tracker for incident entries and session tracking.
 
+## MCP setup
+
+This repo uses one custom MCP server implementation at `mcp/his-py/server.py`.
+The transport changes by client:
+
+- Claude uses stdio through `.mcp.json`
+- ChatGPT uses streamable HTTP through the shared launcher
+
+### One-click launcher
+
+If you are on Windows, you can double-click `bin\launch-codex-mcp.cmd`. It
+starts the ChatGPT-mode MCP server, tries to launch ngrok on port `8001`,
+checks the local port, and opens Codex in the repo directory.
+
+If you want a desktop icon, run `bin\create-desktop-shortcut.ps1` once. It
+creates a shortcut that points to `bin\launch-codex-mcp.cmd`.
+
+### Claude setup
+
+Claude should use the local `.mcp.json` config. The active server name is `his`.
+
+### ChatGPT setup
+
+Start the same server in ChatGPT mode:
+
+```powershell
+.\mcp\his-py\start-mcp.ps1 -Mode ChatGPT
+```
+
+By default the server listens at:
+
+```text
+http://127.0.0.1:8001/mcp
+```
+
+Expose that local URL through an HTTPS tunnel, then add the public tunnel URL
+ending in `/mcp` as the ChatGPT MCP connector URL.
+
+Environment required by the MCP server:
+
+- `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `HIS_USER_ID`
+
 ## What the Android wrapper does
 
 The Android app is wrapped with Capacitor. It opens the hosted Next.js app inside an Android WebView and starts at `/mobile`, which gives a phone-first screen for:

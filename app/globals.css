@@ -28,12 +28,44 @@
 
 * {
   border-color: hsl(var(--border));
+  min-width: 0;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: 'Space Grotesk', 'Geist', monospace;
+}
+
+img,
+svg,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+a,
+label,
+button,
+textarea,
+input,
+select {
+  overflow-wrap: anywhere;
 }
 
 /* Vault glow effect */
@@ -59,9 +91,39 @@ body {
 
 @layer utilities {
   .vault-input {
-    @apply w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-red-900/60 transition-colors;
+    @apply w-full max-w-full min-w-0 bg-black border border-zinc-800 text-zinc-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-red-900/60 transition-colors;
   }
   .phone-input {
-    @apply w-full rounded-2xl border border-zinc-800 bg-black px-4 py-4 text-base text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-zinc-600 transition-colors;
+    @apply w-full max-w-full min-w-0 rounded-2xl border border-zinc-800 bg-black px-4 py-4 text-base text-zinc-100 outline-none placeholder:text-zinc-700 focus:border-zinc-600 transition-colors;
+  }
+  .section-label {
+    @apply text-[10px] tracking-widest text-zinc-600 uppercase font-mono;
+  }
+  .entry-card {
+    @apply min-w-0 max-w-full border border-zinc-800/60 px-3 py-2.5 overflow-hidden;
+  }
+  .meta-pill {
+    @apply text-[9px] font-mono text-zinc-700 border border-zinc-800 px-1.5 py-0.5 uppercase tracking-widest;
+  }
+  .ghost-button {
+    @apply text-[11px] font-mono text-zinc-600 hover:text-zinc-400 uppercase tracking-widest;
+  }
+  .icon-button {
+    @apply text-zinc-700 hover:text-zinc-400 transition-colors shrink-0;
+  }
+  .icon-danger {
+    @apply text-zinc-700 hover:text-red-700 transition-colors shrink-0;
+  }
+  .action-button {
+    @apply text-[11px] font-mono border px-4 py-1.5 disabled:opacity-40 uppercase tracking-widest transition-colors shrink-0;
+  }
+  .action-button.zinc {
+    @apply text-zinc-200 bg-zinc-800 border-zinc-600 hover:bg-zinc-700;
+  }
+  .action-button.amber {
+    @apply text-amber-200 bg-amber-950 border-amber-900/60 hover:bg-amber-900;
+  }
+  .action-button.red {
+    @apply text-red-200 bg-red-950 border-red-900/60 hover:bg-red-900;
   }
 }

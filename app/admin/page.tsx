@@ -37,10 +37,10 @@ export default async function AdminPage() {
 
   return (
     <AppShell role={profile.role} displayName={profile.display_name}>
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase">Admin</h1>
-          <Link href="/admin/invites" className="border border-zinc-700 text-zinc-400 hover:border-zinc-500 px-4 py-2 text-[11px] font-mono tracking-widest uppercase transition-colors">
+      <main className="max-w-4xl mx-auto px-4 py-8 min-w-0 overflow-hidden">
+        <div className="flex items-center justify-between gap-3 mb-8 min-w-0">
+          <h1 className="min-w-0 text-lg font-mono tracking-widest text-zinc-300 uppercase break-words [overflow-wrap:anywhere]">Admin</h1>
+          <Link href="/admin/invites" className="shrink-0 border border-zinc-700 text-zinc-400 hover:border-zinc-500 px-4 py-2 text-[11px] font-mono tracking-widest uppercase transition-colors">
             Manage Invites
           </Link>
         </div>

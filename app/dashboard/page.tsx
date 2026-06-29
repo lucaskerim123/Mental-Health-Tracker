@@ -23,48 +23,48 @@ export default async function DashboardPage() {
   const ongoingSession = sessions?.find(s => !s.date_end) ?? null
   return (
     <AppShell role={profile.role} displayName={profile.display_name}>
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase">Dashboard</h1>
-          <p className="text-xs text-zinc-600 font-mono mt-1">{formatDate(new Date().toISOString())}</p>
+      <main className="max-w-6xl mx-auto px-4 py-8 min-w-0 overflow-hidden">
+        <div className="mb-8 min-w-0">
+          <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase break-words [overflow-wrap:anywhere]">Dashboard</h1>
+          <p className="text-xs text-zinc-600 font-mono mt-1 break-words [overflow-wrap:anywhere]">{formatDate(new Date().toISOString())}</p>
         </div>
 
         {ongoingSession && (
-          <Link href={`/tracker/${ongoingSession.id}`}>
-            <div className="border border-amber-900/40 bg-amber-950/10 p-4 mb-6 flex items-center justify-between hover:border-amber-700/40 transition-colors">
-              <div className="flex items-center gap-3">
-                <Pill className="w-4 h-4 text-amber-700" />
-                <div>
-                  <p className="text-xs font-mono text-amber-600 tracking-wide">Active {sessionLabel(ongoingSession)}</p>
-                  <p className="text-sm font-mono text-zinc-300">Day {daysUp(ongoingSession.date_start)} - {ongoingSession.sleep_hours}h sleep recorded</p>
+          <Link href={`/tracker/${ongoingSession.id}`} className="block min-w-0 max-w-full">
+            <div className="border border-amber-900/40 bg-amber-950/10 p-4 mb-6 flex items-start justify-between gap-3 hover:border-amber-700/40 transition-colors min-w-0 max-w-full overflow-hidden">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <Pill className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-mono text-amber-600 tracking-wide break-words [overflow-wrap:anywhere]">Active {sessionLabel(ongoingSession)}</p>
+                  <p className="text-sm font-mono text-zinc-300 break-words [overflow-wrap:anywhere]">Day {daysUp(ongoingSession.date_start)} - {ongoingSession.sleep_hours}h sleep recorded</p>
                 </div>
               </div>
-              <span className="text-[10px] font-mono text-amber-700 tracking-widest uppercase">View →</span>
+              <span className="text-[10px] font-mono text-amber-700 tracking-widest uppercase shrink-0">View →</span>
             </div>
           </Link>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="border border-zinc-800 bg-zinc-950 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Activity className="w-3.5 h-3.5 text-red-800" />
-                <span className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">Recent Incidents</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+          <div className="border border-zinc-800 bg-zinc-950 p-5 min-w-0 overflow-hidden">
+            <div className="flex items-center justify-between gap-3 mb-4 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Activity className="w-3.5 h-3.5 text-red-800 shrink-0" />
+                <span className="text-[10px] tracking-widest uppercase font-mono text-zinc-500 break-words [overflow-wrap:anywhere]">Recent Incidents</span>
               </div>
               {profile.role === 'admin' && (
-                <Link href="/incidents/new" className="text-[10px] font-mono text-red-800 hover:text-red-600 tracking-widest">+ NEW</Link>
+                <Link href="/incidents/new" className="shrink-0 text-[10px] font-mono text-red-800 hover:text-red-600 tracking-widest">+ NEW</Link>
               )}
             </div>
             {incidents?.length ? (
-              <div className="space-y-2">
+              <div className="space-y-2 min-w-0">
                 {(incidents as MentalHealthIncident[]).map(inc => (
-                  <Link key={inc.id} href={`/incidents/${inc.id}`}>
-                    <div className="border border-zinc-800 hover:border-zinc-700 px-3 py-2.5 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono text-zinc-400">{incidentLabel(inc)} - {formatDate(inc.occurred_at)}</span>
-                        <span className={`text-[10px] font-mono px-1.5 py-0.5 ${inc.severity >= 7 ? 'text-red-700 bg-red-950/30' : inc.severity >= 4 ? 'text-amber-700 bg-amber-950/30' : 'text-zinc-500 bg-zinc-800'}`}>SEV {inc.severity}</span>
+                  <Link key={inc.id} href={`/incidents/${inc.id}`} className="block min-w-0 max-w-full">
+                    <div className="border border-zinc-800 hover:border-zinc-700 px-3 py-2.5 transition-colors min-w-0 max-w-full overflow-hidden">
+                      <div className="flex items-start justify-between gap-2 min-w-0">
+                        <span className="min-w-0 text-xs font-mono text-zinc-400 break-words [overflow-wrap:anywhere]">{incidentLabel(inc)} - {formatDate(inc.occurred_at)}</span>
+                        <span className={`shrink-0 text-[10px] font-mono px-1.5 py-0.5 ${inc.severity >= 7 ? 'text-red-700 bg-red-950/30' : inc.severity >= 4 ? 'text-amber-700 bg-amber-950/30' : 'text-zinc-500 bg-zinc-800'}`}>SEV {inc.severity}</span>
                       </div>
-                      <p className="text-xs text-zinc-500 font-mono mt-1 truncate">
+                      <p className="text-xs text-zinc-500 font-mono mt-1 line-clamp-2 break-words [overflow-wrap:anywhere]">
                         {visibleIncidentText(profile.role, inc, 'description', inc.description)}
                       </p>
                     </div>
@@ -76,26 +76,26 @@ export default async function DashboardPage() {
             )}
           </div>
 
-          <div className="border border-zinc-800 bg-zinc-950 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Pill className="w-3.5 h-3.5 text-amber-800" />
-                <span className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">Session Tracker</span>
+          <div className="border border-zinc-800 bg-zinc-950 p-5 min-w-0 overflow-hidden">
+            <div className="flex items-center justify-between gap-3 mb-4 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Pill className="w-3.5 h-3.5 text-amber-800 shrink-0" />
+                <span className="text-[10px] tracking-widest uppercase font-mono text-zinc-500 break-words [overflow-wrap:anywhere]">Session Tracker</span>
               </div>
               {profile.role === 'admin' && (
-                <Link href="/tracker/new" className="text-[10px] font-mono text-amber-800 hover:text-amber-600 tracking-widest">+ NEW</Link>
+                <Link href="/tracker/new" className="shrink-0 text-[10px] font-mono text-amber-800 hover:text-amber-600 tracking-widest">+ NEW</Link>
               )}
             </div>
             {sessions?.length ? (
-              <div className="space-y-2">
+              <div className="space-y-2 min-w-0">
                 {sessions.map(s => (
-                  <Link key={s.id} href={`/tracker/${s.id}`}>
-                    <div className="border border-zinc-800 hover:border-zinc-700 px-3 py-2.5 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono text-zinc-400">{sessionLabel(s)} - {formatDate(s.date_start)} {s.date_end ? `-> ${formatDate(s.date_end)}` : '-> ongoing'}</span>
-                        <span className={`text-[10px] font-mono px-1.5 py-0.5 ${!s.date_end ? 'text-amber-700 bg-amber-950/30' : 'text-zinc-500 bg-zinc-800'}`}>DAY {daysUp(s.date_start, s.date_end)}</span>
+                  <Link key={s.id} href={`/tracker/${s.id}`} className="block min-w-0 max-w-full">
+                    <div className="border border-zinc-800 hover:border-zinc-700 px-3 py-2.5 transition-colors min-w-0 max-w-full overflow-hidden">
+                      <div className="flex items-start justify-between gap-2 min-w-0">
+                        <span className="min-w-0 text-xs font-mono text-zinc-400 break-words [overflow-wrap:anywhere]">{sessionLabel(s)} - {formatDate(s.date_start)} {s.date_end ? `-> ${formatDate(s.date_end)}` : '-> ongoing'}</span>
+                        <span className={`shrink-0 text-[10px] font-mono px-1.5 py-0.5 ${!s.date_end ? 'text-amber-700 bg-amber-950/30' : 'text-zinc-500 bg-zinc-800'}`}>DAY {daysUp(s.date_start, s.date_end)}</span>
                       </div>
-                      <p className="text-xs text-zinc-500 font-mono mt-1">{s.sleep_hours}h sleep · {s.any_incidents ? 'Incidents logged' : 'No incidents'}</p>
+                      <p className="text-xs text-zinc-500 font-mono mt-1 break-words [overflow-wrap:anywhere]">{s.sleep_hours}h sleep · {s.any_incidents ? 'Incidents logged' : 'No incidents'}</p>
                     </div>
                   </Link>
                 ))}

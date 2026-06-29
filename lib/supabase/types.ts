@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'counsellor' | 'viewer'
+export type Role = 'admin' | 'lawyer' | 'counsellor' | 'viewer'
 export type Resource = 'incidents' | 'tracker' | 'documents' | 'users' | 'admin'
 export type Action = 'view' | 'view_sensitive' | 'create' | 'edit' | 'delete' | 'manage_users' | 'manage_invites'
 export type FieldVisibilityLevel = 'viewer+' | 'counsellor+' | 'lawyer+' | 'admin only'
@@ -164,6 +164,11 @@ export const ROLE_DEFAULTS: Record<Role, Partial<Record<Resource, Action[]>>> = 
     documents: ['view', 'view_sensitive', 'create', 'edit', 'delete'],
     users: ['manage_users', 'manage_invites'],
     admin: ['view'],
+  },
+  lawyer: {
+    incidents: ['view', 'view_sensitive'],
+    tracker: ['view', 'view_sensitive'],
+    documents: ['view', 'view_sensitive'],
   },
   counsellor: {
     incidents: ['view', 'view_sensitive'],

@@ -4,6 +4,34 @@ import { createClient } from '@/lib/supabase/server'
 import AppShell from '@/components/layout/AppShell'
 import TrackerDetail from './TrackerDetail'
 
+type SessionEventRow = {
+  id: string
+  session_id: string
+  event_type?: string | null
+  title?: string | null
+  content?: string | null
+  entry_type?: string | null
+  occurred_at: string
+}
+
+function eventLabel(event: SessionEventRow) {
+  const original = event.event_type || event.entry_type || event.title || event.content || ''
+  const raw = original.trim().toLowerCase()
+  if (raw === 'start' || raw === 'session_start' || raw === 'sesh_start' || raw === 'start_session') return 'Sesh started'
+  if (raw === 'stop' || raw === 'session_stop' || raw === 'sesh_stop' || raw === 'end' || raw === 'end_session' || raw === 'close_session') return 'Sesh stopped'
+  if (raw.includes('mood')) return 'Mood entry'
+  if (raw.includes('sleep')) return 'Sleep'
+  if (raw.includes('note')) return 'Note'
+  if (raw.includes('usage')) return 'Usage log'
+  if (raw.includes('incident')) return 'Incident link'
+  if (raw.includes('document') || raw.includes('attachment')) return 'Document link'
+  if (raw.includes('edit') || raw.includes('update')) return 'Edited entry'
+  if (raw.includes('link')) return 'Linked record'
+  if (raw.includes('summary') || raw.includes('summarise') || raw.includes('summarize')) return 'Summary command'
+  if (raw.includes('status') || raw.includes('check')) return 'Status check'
+  return original || 'Session event'
+}
+
 export default async function TrackerSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const profile = await getProfile()
@@ -53,9 +81,15 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
   const safeSession = canViewSensitive ? session : {
     ...session,
     personal_reflection: null,
-    ...(session.is_sensitive ? { any_incidents: null, notes: null } : {}),
+    ...(session.is_sensitive ? { notes: null } : {}),
     ...sensitiveFieldMask,
   }
+
+  const simpleSessionEvents = ((sessionEvents ?? []) as SessionEventRow[]).map(event => ({
+    ...event,
+    event_type: eventLabel(event),
+    title: null,
+  }))
 
   return (
     <AppShell role={profile.role} displayName={profile.display_name}>
@@ -67,7 +101,7 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
           linkedIncidents={linkedIncidents ?? []}
           availableIncidents={availableIncidents ?? []}
           entries={entries ?? []}
-          sessionEvents={sessionEvents ?? []}
+          sessionEvents={simpleSessionEvents}
           sessionMoods={sessionMoods ?? []}
           sessionNotes={sessionNotes ?? []}
           role={profile.role}

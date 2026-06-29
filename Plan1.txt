@@ -1,0 +1,19 @@
+Current change notes so far:
+Session details should be more toward the top.
+Log entries should only log stuff from MCP commands.
+Log entries / session events need to be lower toward the bottom.
+Log entries and session events are kind of the same thing, so combine or clean that up so it is not duplicated.
+Mood entries, notes, and other session entries need visibility controls: viewer / counsellor / lawyer / admin.
+Remove the any_incidents field.
+There is no proper way to connect incidents, so add a proper incident-linking method.
+Needs more privacy control.
+Needs better inputs, not just basic/free-text fields.
+MCP /createincident needs fixing so structured values go into the proper incident fields, not dumped into notes.
+Required MCP /createincident behaviour:
+link_session: true should set tracker_session_id to the active session.
+emergency_services: false should go into the emergency_services field.
+police_called: false should go into the police_called field.
+ambulance_called: false should go into the ambulance_called field.
+was_arrested: false should go into the was_arrested field.
+was_sectioned: false should go into the was_sectioned field.
+The text “Linked to active session. No emergency services. No police. No ambulance. No arrest. No sectioning.” should not be stored as a plain note when those are actual structured fields.
