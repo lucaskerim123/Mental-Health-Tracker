@@ -19,9 +19,13 @@ function generateToken(): string {
 }
 
 function inviteMessage(url: string) {
-  return `You have been invited to Luke's tracker.
+  return `ACCESS DROP — PRIVATE ENTRY
 
-To join, open the tracker app/site and use the padlock access/join option. Paste this invite link there when asked.
+A door has been left for you.
+
+Go to Luke's tracker. Do not enter through the front. Use the padlock. When it asks for access, place this invite there.
+
+This link is temporary. Keep it quiet.
 
 If all else fails, please use the URL:
 ${url}`
