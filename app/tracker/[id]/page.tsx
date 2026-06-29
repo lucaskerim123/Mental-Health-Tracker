@@ -15,7 +15,7 @@ type SessionEventRow = {
 }
 
 function eventLabel(event: SessionEventRow) {
-  const original = event.event_type || event.entry_type || event.title || ''
+  const original = event.event_type || event.entry_type || event.title || event.content || ''
   const raw = original.trim().toLowerCase()
   if (raw === 'start' || raw === 'session_start' || raw === 'sesh_start' || raw === 'start_session') return 'Sesh started'
   if (raw === 'stop' || raw === 'session_stop' || raw === 'sesh_stop' || raw === 'end' || raw === 'end_session' || raw === 'close_session') return 'Sesh stopped'
@@ -89,7 +89,6 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
     ...event,
     event_type: eventLabel(event),
     title: null,
-    content: null,
   }))
 
   return (
