@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Lock, ChevronRight } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { ChevronRight, KeyRound, Lock, ShieldAlert } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -30,7 +29,7 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
-      setError('Access denied. Check your credentials.')
+      setError('ACCESS DENIED — BAD SEAL')
       setLoading(false)
       return
     }
@@ -45,91 +44,133 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="vault-bg relative min-h-screen flex items-center justify-center p-4 bg-black">
-      <div className="relative z-10 w-full max-w-sm">
-        <div className="text-center mb-8">
-          <button
-            type="button"
-            onClick={() => setInviteVisible(v => !v)}
-            className="inline-flex items-center justify-center w-16 h-16 border border-red-900/60 mb-4 vault-glow cursor-pointer transition-colors hover:border-red-800/80 focus:outline-none"
-            aria-label="Toggle invite entry"
-          >
-            <Lock
-              className={cn('w-7 h-7 transition-colors', inviteVisible ? 'text-red-500' : 'text-red-700')}
-              strokeWidth={1.5}
-            />
-          </button>
-          <p className="text-[10px] tracking-[0.4em] text-red-700/80 uppercase font-mono">Restricted Access</p>
-          <p className="text-[10px] tracking-[0.3em] text-zinc-600 uppercase font-mono mt-1">Authorised Personnel Only</p>
-        </div>
+    <main className="relative min-h-screen overflow-hidden bg-black text-zinc-300">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(127,29,29,0.22),transparent_34%),radial-gradient(circle_at_50%_72%,rgba(63,63,70,0.16),transparent_45%),linear-gradient(180deg,#030303_0%,#09090b_48%,#020202_100%)]" />
+      <div className="absolute inset-0 opacity-[0.07] bg-[linear-gradient(rgba(255,255,255,.12)_1px,transparent_1px)] bg-[length:100%_4px]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-900/70 to-transparent" />
+      <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-red-950/20" />
 
-        <div className="border border-zinc-800 vault-glow bg-zinc-950 p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Identifier</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-red-900/60 transition-colors"
-                autoComplete="email"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Passphrase</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-red-900/60 transition-colors"
-                autoComplete="current-password"
-              />
-            </div>
-            {error && (
-              <p className="text-[11px] text-red-700 font-mono border border-red-900/40 px-3 py-2 bg-red-950/20">{error}</p>
-            )}
+      <section className="relative z-10 flex min-h-screen items-center justify-center px-5 py-10">
+        <div className="w-full max-w-md">
+          <div className="mb-7 flex flex-col items-center text-center">
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-red-950 hover:bg-red-900 border border-red-900/60 text-red-200 py-2.5 text-[11px] tracking-[0.3em] uppercase font-mono transition-colors disabled:opacity-40"
+              type="button"
+              onClick={() => setInviteVisible(v => !v)}
+              aria-label="Toggle hidden invite entry"
+              className={`group relative mb-5 flex h-32 w-32 items-center justify-center rounded-full border bg-black/90 transition-all duration-300 ${inviteVisible ? 'border-red-700 shadow-[0_0_55px_rgba(185,28,28,.34)]' : 'border-zinc-800 hover:border-red-900/70 hover:shadow-[0_0_35px_rgba(127,29,29,.25)]'}`}
             >
-              {loading ? 'Verifying...' : 'Request Access'}
+              <span className="absolute inset-2 rounded-full border border-zinc-800/80" />
+              <span className="absolute inset-5 rounded-full border border-red-950/60" />
+              <span className="absolute -inset-1 rounded-full border border-red-950/40 opacity-0 transition-opacity group-hover:opacity-100" />
+              <span className="absolute left-1/2 top-0 h-3 w-px -translate-x-1/2 bg-red-900/70" />
+              <span className="absolute bottom-0 left-1/2 h-3 w-px -translate-x-1/2 bg-red-900/70" />
+              <span className="absolute left-0 top-1/2 h-px w-3 -translate-y-1/2 bg-red-900/70" />
+              <span className="absolute right-0 top-1/2 h-px w-3 -translate-y-1/2 bg-red-900/70" />
+              <Lock className={`relative z-10 h-10 w-10 transition-all duration-300 ${inviteVisible ? 'text-red-500 scale-110' : 'text-red-800 group-hover:text-red-600'}`} strokeWidth={1.45} />
             </button>
-          </form>
-        </div>
 
-        <div className={cn(
-          'overflow-hidden transition-all duration-300',
-          inviteVisible ? 'max-h-40 opacity-100 mt-4' : 'max-h-0 opacity-0'
-        )}>
-          <div className="border border-zinc-800 bg-zinc-950 px-4 py-4">
-            <p className="text-[10px] tracking-[0.3em] text-zinc-600 uppercase font-mono mb-3">Invite Code</p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inviteCode}
-                onChange={e => setInviteCode(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleInviteContinue()}
-                placeholder="Paste code here"
-                className="flex-1 bg-black border border-zinc-800 text-zinc-300 px-3 py-2 text-xs font-mono focus:outline-none focus:border-zinc-600 placeholder:text-zinc-700 transition-colors"
-              />
-              <button
-                type="button"
-                onClick={handleInviteContinue}
-                className="border border-zinc-700 hover:border-zinc-500 text-zinc-500 hover:text-zinc-300 px-3 py-2 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+            <p className="text-[11px] font-mono uppercase tracking-[0.55em] text-red-700">Vault Entry</p>
+            <h1 className="mt-3 text-xl font-mono uppercase tracking-[0.45em] text-zinc-200">Restricted Access</h1>
+            <p className="mt-3 text-[10px] font-mono uppercase tracking-[0.32em] text-zinc-600">Not all doors are visible</p>
+          </div>
+
+          <div className="relative border border-zinc-800 bg-black/88 p-1 shadow-[0_0_80px_rgba(0,0,0,.75)]">
+            <div className="absolute -left-px -top-px h-9 w-9 border-l border-t border-red-900/70" />
+            <div className="absolute -right-px -top-px h-9 w-9 border-r border-t border-red-900/70" />
+            <div className="absolute -bottom-px -left-px h-9 w-9 border-b border-l border-red-900/70" />
+            <div className="absolute -bottom-px -right-px h-9 w-9 border-b border-r border-red-900/70" />
+            <div className="border border-zinc-900 bg-zinc-950/60 p-6 sm:p-8">
+              <div className="mb-6 flex items-center justify-between border-b border-zinc-900 pb-4">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 text-red-800" />
+                  <span className="text-[10px] font-mono uppercase tracking-[0.28em] text-zinc-600">Identity Seal</span>
+                </div>
+                <span className="h-1.5 w-1.5 rounded-full bg-red-800 shadow-[0_0_14px_rgba(185,28,28,.8)]" />
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <VaultField label="Access ID">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                    className="vault-input-red"
+                    autoComplete="email"
+                  />
+                </VaultField>
+
+                <VaultField label="Passphrase">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    className="vault-input-red"
+                    autoComplete="current-password"
+                  />
+                </VaultField>
+
+                {error && <p className="border border-red-900/50 bg-red-950/20 px-3 py-2 text-[11px] font-mono uppercase tracking-widest text-red-600">{error}</p>}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group relative w-full overflow-hidden border border-red-900/70 bg-red-950/70 px-4 py-3.5 text-[11px] font-mono uppercase tracking-[0.35em] text-red-100 transition-all hover:border-red-700 hover:bg-red-900/70 disabled:opacity-40"
+                >
+                  <span className="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-red-500/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                  {loading ? 'Checking Seal...' : 'Open Vault'}
+                </button>
+              </form>
             </div>
           </div>
-        </div>
 
-        <p className="text-center text-[10px] text-zinc-700 font-mono mt-6 tracking-widest uppercase">
-          No public registration
-        </p>
-      </div>
+          <div className={`overflow-hidden transition-all duration-500 ${inviteVisible ? 'max-h-72 opacity-100 mt-4 translate-y-0' : 'max-h-0 opacity-0 -translate-y-2'}`}>
+            <div className="relative border border-red-950/60 bg-black/90 p-4 shadow-[0_0_35px_rgba(127,29,29,.14)]">
+              <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-red-900/70 to-transparent" />
+              <div className="mb-3 flex items-center gap-2">
+                <KeyRound className="h-3.5 w-3.5 text-red-800" />
+                <div>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.32em] text-red-800">Hidden Entry</p>
+                  <p className="mt-1 text-[10px] font-mono text-zinc-700">Place the key where it belongs.</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inviteCode}
+                  onChange={e => setInviteCode(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleInviteContinue()}
+                  placeholder="Enter thy code"
+                  className="vault-input-red flex-1 text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={handleInviteContinue}
+                  className="border border-zinc-800 px-3 text-zinc-600 transition-colors hover:border-red-900/70 hover:text-red-700"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-7 text-center text-[10px] font-mono uppercase tracking-[0.34em] text-zinc-700">Public Entry Disabled</p>
+        </div>
+      </section>
+
+      <style jsx global>{`
+        .vault-input-red{width:100%;background:#020202;border:1px solid rgb(39 39 42);color:rgb(228 228 231);padding:.75rem .85rem;font-size:.875rem;font-family:monospace;outline:none;transition:border-color .18s,box-shadow .18s,background .18s}.vault-input-red:focus{border-color:rgba(127,29,29,.9);box-shadow:0 0 0 1px rgba(127,29,29,.35),0 0 26px rgba(127,29,29,.13);background:#000}.vault-input-red::placeholder{color:rgb(63 63 70)}
+      `}</style>
+    </main>
+  )
+}
+
+function VaultField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] font-mono uppercase tracking-[0.33em] text-zinc-600">{label}</label>
+      {children}
     </div>
   )
 }
