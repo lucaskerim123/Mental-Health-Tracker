@@ -12,12 +12,19 @@ The transport changes by client:
 
 ### One-click launcher
 
-If you are on Windows, you can double-click `bin\launch-codex-mcp.cmd`. It
-starts the ChatGPT-mode MCP server, tries to launch ngrok on port `8001`,
-checks the local port, and opens Codex in the repo directory.
+If you are on Windows, the preferred launcher is
+`bin\Mental-Health-Tracker-Launcher.exe`. It starts the ChatGPT-mode MCP
+server, tries to launch ngrok on port `8001`, checks the local port, and opens
+Codex in the repo directory.
 
 If you want a desktop icon, run `bin\create-desktop-shortcut.ps1` once. It
-creates a shortcut that points to `bin\launch-codex-mcp.cmd`.
+creates a shortcut that points to the packaged `.exe` when present, otherwise
+it falls back to `bin\launch-codex-mcp.cmd`.
+
+The launcher also tries to read ngrok's local API and prints the public tunnel
+URL when available. It copies that URL to the clipboard.
+
+To rebuild the `.exe`, run `bin\build-launcher-exe.ps1`.
 
 ### Claude setup
 

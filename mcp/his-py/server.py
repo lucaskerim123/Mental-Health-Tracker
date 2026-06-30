@@ -82,7 +82,13 @@ async def lifespan(server: FastMCP):
     )
     yield {"db": db, "uid": _require_env("HIS_USER_ID")}
 
-mcp = FastMCP("his_mcp", lifespan=lifespan)
+mcp = FastMCP(
+    "his_mcp",
+    lifespan=lifespan,
+    host=os.environ.get("HIS_MCP_HOST", "127.0.0.1"),
+    port=int(os.environ.get("HIS_MCP_PORT", "8001")),
+    streamable_http_path=os.environ.get("HIS_MCP_PATH", "/mcp"),
+)
 register_lockdown_tool(mcp)
 
 # ---------------------------------------------------------------------------
@@ -256,7 +262,7 @@ async def set_notes(db: AsyncClient, session_id: str, notes: str) -> dict:
     return resp.data
 
 def _ctx(ctx: Context) -> tuple[AsyncClient, str]:
-    s = ctx.request_context.lifespan_state
+    s = ctx.request_context.lifespan_context
     return s["db"], s["uid"]
 
 # ---------------------------------------------------------------------------
@@ -1038,7 +1044,6 @@ All timestamps display in Sydney time (AEST/AEDT).
 if __name__ == "__main__":
     transport = os.environ.get("HIS_TRANSPORT", "stdio")
     if transport == "http":
-        port = int(os.environ.get("HIS_MCP_PORT", "8001"))
-        mcp.run(transport="streamable-http", port=port)
+        mcp.run(transport="streamable-http")
     else:
         mcp.run(transport="stdio")

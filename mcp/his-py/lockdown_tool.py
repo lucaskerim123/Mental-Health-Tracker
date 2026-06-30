@@ -20,7 +20,7 @@ def register_lockdown_tool(mcp: FastMCP) -> None:
         Checks site_config.lockdown_pin_hash first.
         Maps to /lockdown [y|n].
         """
-        state = ctx.request_context.lifespan_state
+        state = ctx.request_context.lifespan_context
         db = state["db"]
         uid = state["uid"]
 

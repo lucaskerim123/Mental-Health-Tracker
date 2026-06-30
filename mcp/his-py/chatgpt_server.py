@@ -22,7 +22,7 @@ def _env_int(name: str, default: int) -> int:
 
 if __name__ == "__main__":
     mcp.settings.host = os.environ.get("HIS_MCP_HOST", "127.0.0.1")
-    mcp.settings.port = _env_int("HIS_MCP_PORT", 8001)
+    mcp.settings.port = _env_int("HIS_MCP_PORT", 8002)
     mcp.settings.streamable_http_path = os.environ.get("HIS_MCP_PATH", "/mcp")
     mcp.settings.transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=False
