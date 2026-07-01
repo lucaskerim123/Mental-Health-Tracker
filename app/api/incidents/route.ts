@@ -9,13 +9,17 @@ function isMissingBriefSummaryColumnError(error: { code?: string | null; message
   return error?.code === '42703' || (message.includes('brief_summary') && message.includes('column'))
 }
 
+function canWriteIncidents(role: string | null | undefined) {
+  return role === 'admin' || role === 'owner'
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: profile } = await supabase.from('users').select('role, display_name').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!canWriteIncidents(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
   const admin = createAdminClient()
