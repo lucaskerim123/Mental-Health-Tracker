@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Plus, ChevronRight, UserPlus, Search, Shield, Activity, Settings, AlertTriangle, Ban, X } from 'lucide-react'
 import Link from 'next/link'
@@ -10,6 +11,7 @@ import type { RolePermissionsMatrix } from '@/lib/role-permissions'
 import RolesTab from './RolesTab'
 
 type Tab = 'users' | 'roles' | 'bans' | 'activity' | 'config' | 'lockdown'
+type TabOption = { id: Tab; label: string }
 
 interface Props {
   users: UserProfile[]
@@ -19,9 +21,13 @@ interface Props {
   activityLogs: ActivityLog[]
   config: Record<string, string>
   rolePermissions: RolePermissionsMatrix
+  allowedTabs: Tab[]
+  canManageUsers: boolean
+  canAssignPrivilegedRoles: boolean
 }
 
 const ROLE_COLORS: Record<Role, string> = {
+  owner: 'text-red-500',
   admin: 'text-red-700',
   lawyer: 'text-blue-700',
   counsellor: 'text-amber-700',
@@ -37,10 +43,12 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
   lockdown: <Shield className="w-3 h-3" />,
 }
 
-function UsersTab({ users: initialUsers, currentUserId, overrideCounts }: {
+function UsersTab({ users: initialUsers, currentUserId, overrideCounts, canManageUsers, canAssignPrivilegedRoles }: {
   users: UserProfile[]
   currentUserId: string
   overrideCounts: Record<string, number>
+  canManageUsers: boolean
+  canAssignPrivilegedRoles: boolean
 }) {
   const [users, setUsers] = useState(initialUsers)
   const [search, setSearch] = useState('')
@@ -51,6 +59,7 @@ function UsersTab({ users: initialUsers, currentUserId, overrideCounts }: {
   const [role, setRole] = useState<Role>('viewer')
   const [creating, setCreating] = useState(false)
 
+  const ownerCount = users.filter(u => u.role === 'owner').length
   const adminCount = users.filter(u => u.role === 'admin').length
   const lawyerCount = users.filter(u => u.role === 'lawyer').length
   const counsellorCount = users.filter(u => u.role === 'counsellor').length
@@ -82,6 +91,7 @@ function UsersTab({ users: initialUsers, currentUserId, overrideCounts }: {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-6 px-1 pb-2 border-b border-zinc-800 flex-wrap">
+        <span className="text-[10px] font-mono text-zinc-600"><span className="text-red-500">{ownerCount}</span> owner{ownerCount !== 1 ? 's' : ''}</span>
         <span className="text-[10px] font-mono text-zinc-600"><span className="text-red-800">{adminCount}</span> admin{adminCount !== 1 ? 's' : ''}</span>
         <span className="text-[10px] font-mono text-zinc-600"><span className="text-blue-800">{lawyerCount}</span> lawyer{lawyerCount !== 1 ? 's' : ''}</span>
         <span className="text-[10px] font-mono text-zinc-600"><span className="text-amber-800">{counsellorCount}</span> counsellor{counsellorCount !== 1 ? 's' : ''}</span>
@@ -89,7 +99,7 @@ function UsersTab({ users: initialUsers, currentUserId, overrideCounts }: {
         <span className="text-[10px] font-mono text-zinc-700 ml-auto">{users.length} total</span>
       </div>
 
-      {showForm ? (
+      {showForm && canManageUsers ? (
         <div className="border border-zinc-700 bg-zinc-950 p-5">
           <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500 mb-4">New User</p>
           <form onSubmit={createUser} className="space-y-4">
@@ -102,7 +112,8 @@ function UsersTab({ users: initialUsers, currentUserId, overrideCounts }: {
                   <option value="viewer">viewer</option>
                   <option value="lawyer">lawyer</option>
                   <option value="counsellor">counsellor</option>
-                  <option value="admin">admin</option>
+                  {canAssignPrivilegedRoles && <option value="admin">admin</option>}
+                  {canAssignPrivilegedRoles && <option value="owner">owner</option>}
                 </select>
               </FormField>
             </div>
@@ -114,7 +125,7 @@ function UsersTab({ users: initialUsers, currentUserId, overrideCounts }: {
         </div>
       ) : (
         <div className="flex items-center gap-3">
-          <button onClick={() => setShowForm(true)} className="admin-button"><Plus className="w-3 h-3" /> Add User</button>
+          {canManageUsers && <button onClick={() => setShowForm(true)} className="admin-button"><Plus className="w-3 h-3" /> Add User</button>}
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-700" />
             <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Filter by name or role..." className="w-full bg-black border border-zinc-800 text-zinc-300 pl-8 pr-3 py-2 text-xs font-mono focus:outline-none focus:border-zinc-600 placeholder:text-zinc-700 transition-colors" />
@@ -188,7 +199,7 @@ function BansTab({ bans: initialBans, users }: { bans: BanType[]; users: UserPro
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Type"><select value={type} onChange={e => { setType(e.target.value as 'user' | 'ip'); setValue('') }} className="admin-input"><option value="ip">IP Address</option><option value="user">User</option></select></FormField>
             <FormField label={type === 'ip' ? 'IP Address' : 'User'}>
-              {type === 'ip' ? <input type="text" value={value} onChange={e => setValue(e.target.value)} required placeholder="e.g. 1.2.3.4" className="admin-input" /> : <select value={value} onChange={e => setValue(e.target.value)} required className="admin-input"><option value="">Select user…</option>{users.filter(u => u.role !== 'admin').map(u => <option key={u.id} value={u.id}>{u.display_name} ({u.role})</option>)}</select>}
+              {type === 'ip' ? <input type="text" value={value} onChange={e => setValue(e.target.value)} required placeholder="e.g. 1.2.3.4" className="admin-input" /> : <select value={value} onChange={e => setValue(e.target.value)} required className="admin-input"><option value="">Select user…</option>{users.filter(u => u.role !== 'admin' && u.role !== 'owner').map(u => <option key={u.id} value={u.id}>{u.display_name} ({u.role})</option>)}</select>}
             </FormField>
             <FormField label="Reason (optional)"><input type="text" value={reason} onChange={e => setReason(e.target.value)} className="admin-input" /></FormField>
             <FormField label="Expires (optional)"><input type="datetime-local" value={expires} onChange={e => setExpires(e.target.value)} className="admin-input" /></FormField>
@@ -287,9 +298,10 @@ function FormField({ label, children }: { label: string; children: ReactNode }) 
   return <div className="space-y-1.5"><label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">{label}</label>{children}</div>
 }
 
-export default function AdminClient({ users, currentUserId, overrideCounts, bans, activityLogs, config, rolePermissions }: Props) {
-  const [tab, setTab] = useState<Tab>('users')
-  const TABS: { id: Tab; label: string }[] = [
+export default function AdminClient({ users, currentUserId, overrideCounts, bans, activityLogs, config, rolePermissions, allowedTabs, canManageUsers, canAssignPrivilegedRoles }: Props) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const TABS: TabOption[] = [
     { id: 'users', label: 'Users' },
     { id: 'roles', label: 'Roles' },
     { id: 'bans', label: 'Bans' },
@@ -297,6 +309,24 @@ export default function AdminClient({ users, currentUserId, overrideCounts, bans
     { id: 'config', label: 'Config' },
     { id: 'lockdown', label: 'Lockdown' },
   ]
+  const visibleTabs = TABS.filter(tab => allowedTabs.includes(tab.id))
+  const requestedTab = searchParams.get('tab')
+  const requested = requestedTab === null ? 'users' : requestedTab
+  const normalizedTab = visibleTabs.find(tab => tab.id === requested)?.id ?? visibleTabs[0]?.id ?? 'users'
+  const [tab, setTab] = useState<Tab>(normalizedTab)
 
-  return <div className="space-y-6"><style jsx global>{`.admin-input{width:100%;background:#000;border:1px solid rgb(39 39 42);color:rgb(228 228 231);padding:.5rem .75rem;font-size:.875rem;font-family:monospace;outline:none}.admin-input:focus{border-color:rgb(82 82 91)}.admin-button{display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border:1px solid rgb(63 63 70);color:rgb(161 161 170);font-size:11px;font-family:monospace;letter-spacing:.1em;text-transform:uppercase;transition:color .15s,border-color .15s}.admin-button:hover{border-color:rgb(113 113 122)}.admin-button:disabled{opacity:.4}`}</style><div className="flex border-b border-zinc-800 overflow-x-auto">{TABS.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-mono tracking-widest uppercase transition-colors border-b-2 -mb-px shrink-0 ${tab === t.id ? t.id === 'lockdown' ? 'border-red-800 text-red-600' : 'border-zinc-400 text-zinc-300' : 'border-transparent text-zinc-600 hover:text-zinc-400'}`}>{TAB_ICONS[t.id]}{t.label}{t.id === 'lockdown' && config.lockdown_mode === 'true' && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse inline-block" />}</button>)}</div>{tab === 'users' && <UsersTab users={users} currentUserId={currentUserId} overrideCounts={overrideCounts} />}{tab === 'roles' && <RolesTab initialRolePermissions={rolePermissions} />}{tab === 'bans' && <BansTab bans={bans} users={users} />}{tab === 'activity' && <ActivityTab logs={activityLogs} />}{tab === 'config' && <ConfigTab config={config} />}{tab === 'lockdown' && <LockdownTab config={config} />}</div>
+  useEffect(() => {
+    setTab(normalizedTab)
+  }, [normalizedTab])
+
+  function selectTab(nextTab: Tab) {
+    setTab(nextTab)
+    const params = new URLSearchParams(searchParams.toString())
+    if (nextTab === 'users') params.delete('tab')
+    else params.set('tab', nextTab)
+    const query = params.toString()
+    router.replace(query ? `/admin?${query}` : '/admin')
+  }
+
+  return <div className="space-y-6"><style jsx global>{`.admin-input{width:100%;background:#000;border:1px solid rgb(39 39 42);color:rgb(228 228 231);padding:.5rem .75rem;font-size:.875rem;font-family:monospace;outline:none}.admin-input:focus{border-color:rgb(82 82 91)}.admin-button{display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border:1px solid rgb(63 63 70);color:rgb(161 161 170);font-size:11px;font-family:monospace;letter-spacing:.1em;text-transform:uppercase;transition:color .15s,border-color .15s}.admin-button:hover{border-color:rgb(113 113 122)}.admin-button:disabled{opacity:.4}`}</style><div className="flex border-b border-zinc-800 overflow-x-auto">{visibleTabs.map(t => <button key={t.id} onClick={() => selectTab(t.id)} className={`flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-mono tracking-widest uppercase transition-colors border-b-2 -mb-px shrink-0 ${tab === t.id ? t.id === 'lockdown' ? 'border-red-800 text-red-600' : 'border-zinc-400 text-zinc-300' : 'border-transparent text-zinc-600 hover:text-zinc-400'}`}>{TAB_ICONS[t.id]}{t.label}{t.id === 'lockdown' && config.lockdown_mode === 'true' && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse inline-block" />}</button>)}</div>{tab === 'users' && <UsersTab users={users} currentUserId={currentUserId} overrideCounts={overrideCounts} canManageUsers={canManageUsers} canAssignPrivilegedRoles={canAssignPrivilegedRoles} />}{tab === 'roles' && <RolesTab initialRolePermissions={rolePermissions} />}{tab === 'bans' && <BansTab bans={bans} users={users} />}{tab === 'activity' && <ActivityTab logs={activityLogs} />}{tab === 'config' && <ConfigTab config={config} />}{tab === 'lockdown' && <LockdownTab config={config} />}</div>
 }

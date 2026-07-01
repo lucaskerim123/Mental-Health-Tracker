@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const uid = authData.user.id
   const { error: profileError } = await admin
     .from('users')
-    .upsert({ id: uid, display_name, role: 'admin' }, { onConflict: 'id' })
+    .upsert({ id: uid, display_name, role: 'owner' }, { onConflict: 'id' })
 
   if (profileError) {
     console.error('setup profileError:', JSON.stringify(profileError))

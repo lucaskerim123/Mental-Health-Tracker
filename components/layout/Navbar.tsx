@@ -52,7 +52,7 @@ export default function Navbar({ role, displayName }: NavbarProps) {
                 {label}
               </Link>
             ))}
-            {role === 'admin' && (
+            {(role === 'admin' || role === 'owner') && (
               <Link
                 href="/admin"
                 className={cn(

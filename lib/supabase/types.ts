@@ -1,5 +1,17 @@
-export type Role = 'admin' | 'lawyer' | 'counsellor' | 'viewer'
-export type Resource = 'incidents' | 'tracker' | 'documents' | 'users' | 'admin'
+export type Role = 'owner' | 'admin' | 'counsellor' | 'lawyer' | 'viewer'
+export type Resource =
+  | 'dashboard'
+  | 'incidents'
+  | 'tracker'
+  | 'documents'
+  | 'admin'
+  | 'admin_users'
+  | 'admin_roles'
+  | 'admin_bans'
+  | 'admin_activity'
+  | 'admin_config'
+  | 'admin_lockdown'
+  | 'admin_invites'
 export type Action = 'view' | 'view_sensitive' | 'create' | 'edit' | 'delete' | 'manage_users' | 'manage_invites'
 export type FieldVisibilityLevel = 'viewer+' | 'counsellor+' | 'lawyer+' | 'admin only'
 export type IncidentFieldKey =
@@ -211,24 +223,48 @@ export interface SessionEventEntry {
 
 // Role-based defaults (checked when no override row exists)
 export const ROLE_DEFAULTS: Record<Role, Partial<Record<Resource, Action[]>>> = {
-  admin: {
+  owner: {
+    dashboard: ['view'],
     incidents: ['view', 'view_sensitive', 'create', 'edit', 'delete'],
     tracker: ['view', 'view_sensitive', 'create', 'edit', 'delete'],
     documents: ['view', 'view_sensitive', 'create', 'edit', 'delete'],
-    users: ['manage_users', 'manage_invites'],
     admin: ['view'],
+    admin_users: ['view', 'manage_users'],
+    admin_roles: ['view'],
+    admin_bans: ['view'],
+    admin_activity: ['view'],
+    admin_config: ['view'],
+    admin_lockdown: ['view'],
+    admin_invites: ['view', 'manage_invites'],
+  },
+  admin: {
+    dashboard: ['view'],
+    incidents: ['view', 'view_sensitive', 'create', 'edit', 'delete'],
+    tracker: ['view', 'view_sensitive', 'create', 'edit', 'delete'],
+    documents: ['view', 'view_sensitive', 'create', 'edit', 'delete'],
+    admin: ['view'],
+    admin_users: ['view', 'manage_users'],
+    admin_roles: ['view'],
+    admin_bans: ['view'],
+    admin_activity: ['view'],
+    admin_config: ['view'],
+    admin_lockdown: ['view'],
+    admin_invites: ['view', 'manage_invites'],
   },
   lawyer: {
+    dashboard: ['view'],
     incidents: ['view', 'view_sensitive'],
     tracker: ['view', 'view_sensitive'],
     documents: ['view', 'view_sensitive'],
   },
   counsellor: {
+    dashboard: ['view'],
     incidents: ['view', 'view_sensitive'],
     tracker: ['view', 'view_sensitive'],
     documents: ['view', 'view_sensitive'],
   },
   viewer: {
+    dashboard: ['view'],
     incidents: ['view'],
     tracker: ['view'],
     documents: ['view'],

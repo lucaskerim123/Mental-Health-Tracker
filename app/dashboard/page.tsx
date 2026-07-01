@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   const lockdownActive = config.lockdown_mode === 'true'
   const hasPin = !!config.lockdown_pin_hash
   return (
-    <AppShell role={profile.role} displayName={profile.display_name}>
+    <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
       <main className="max-w-6xl mx-auto px-4 py-8 min-w-0 overflow-hidden">
         <div className="mb-8 min-w-0">
           <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase break-words [overflow-wrap:anywhere]">Dashboard</h1>

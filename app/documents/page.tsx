@@ -24,7 +24,7 @@ export default async function DocumentsPage() {
   })
 
   return (
-    <AppShell role={profile.role} displayName={profile.display_name}>
+    <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase">Documents</h1>

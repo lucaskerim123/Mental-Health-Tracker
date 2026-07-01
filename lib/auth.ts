@@ -2,6 +2,8 @@ import { createClient } from './supabase/server'
 import type { UserProfile, Resource, Action, Permission } from './supabase/types'
 import { ROLE_DEFAULTS } from './supabase/types'
 import type { RolePermissionsMatrix } from './role-permissions'
+import { parseRolePermissions } from './role-permissions'
+import { createAdminClient } from './supabase/admin'
 
 export async function getSession() {
   const supabase = await createClient()
@@ -21,6 +23,21 @@ export async function getPermissions(userId: string): Promise<Permission[]> {
   const supabase = await createClient()
   const { data } = await supabase.from('permissions').select('*').eq('user_id', userId)
   return data ?? []
+}
+
+export async function getRolePermissions(): Promise<RolePermissionsMatrix> {
+  const admin = createAdminClient()
+  const { data } = await admin.from('site_config').select('value').eq('key', 'role_permissions').maybeSingle()
+  return parseRolePermissions(data?.value ?? null)
+}
+
+export async function getPermissionContext(userId: string) {
+  const [overrides, roleDefaults] = await Promise.all([
+    getPermissions(userId),
+    getRolePermissions(),
+  ])
+
+  return { overrides, roleDefaults }
 }
 
 export function can(

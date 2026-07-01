@@ -11,7 +11,7 @@ export async function PATCH(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: profile } = await supabase.from('users').select('role, display_name').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (profile?.role !== 'admin' && profile?.role !== 'owner') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { userId, display_name, role } = await req.json() as { userId?: string; display_name?: string; role?: Role }
   if (!userId || !display_name || !role) {
@@ -25,14 +25,14 @@ export async function PATCH(req: NextRequest) {
   const currentUserIsOwner = await isAdminOwner(user.id)
   const targetIsOwner = await isAdminOwner(target.id)
   const roleChanging = target.role !== role
-  const adminRoleChange = target.role === 'admin' || role === 'admin'
+  const adminRoleChange = target.role === 'admin' || role === 'admin' || target.role === 'owner' || role === 'owner'
 
   if (targetIsOwner && user.id !== target.id) {
     return NextResponse.json({ error: 'The admin owner account cannot be modified by another user' }, { status: 403 })
   }
 
   if (adminRoleChange && !currentUserIsOwner) {
-    return NextResponse.json({ error: 'Only the admin owner can change admin roles' }, { status: 403 })
+    return NextResponse.json({ error: 'Only the owner can change admin or owner roles' }, { status: 403 })
   }
 
   const { error } = await admin.from('users').update({ display_name, role }).eq('id', userId)

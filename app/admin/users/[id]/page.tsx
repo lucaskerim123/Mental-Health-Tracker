@@ -12,7 +12,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params
   const profile = await getProfile()
   if (!profile) redirect('/login')
-  if (profile.role !== 'admin') redirect('/dashboard')
+  if (profile.role !== 'admin' && profile.role !== 'owner') redirect('/dashboard')
 
   const supabase = await createClient()
   const admin = createAdminClient()
@@ -38,7 +38,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const targetIsOwner = ownerId === user.id
 
   return (
-    <AppShell role={profile.role} displayName={profile.display_name}>
+    <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-8">
           <Link href="/admin" className="text-zinc-600 hover:text-zinc-400 text-[11px] font-mono tracking-widest uppercase transition-colors">Admin</Link>

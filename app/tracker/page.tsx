@@ -19,7 +19,7 @@ export default async function TrackerPage() {
   const isAdmin = profile.role === 'admin'
 
   return (
-    <AppShell role={profile.role} displayName={profile.display_name}>
+    <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
       <main className="max-w-4xl mx-auto px-4 py-8 min-w-0 overflow-hidden">
         <div className="flex items-center justify-between gap-3 mb-8 min-w-0">
           <h1 className="min-w-0 text-lg font-mono tracking-widest text-zinc-300 uppercase break-words [overflow-wrap:anywhere]">Session Tracker</h1>

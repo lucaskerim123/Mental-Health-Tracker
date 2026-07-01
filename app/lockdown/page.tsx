@@ -17,7 +17,7 @@ export default async function LockdownPage() {
 
   const siteName = cfg.site_name ?? 'Mental Health Tracker'
   const message = cfg.lockdown_message ?? 'Site is on lockdown.'
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'owner'
 
   return <LockdownDisplay siteName={siteName} message={message} isAdmin={isAdmin} />
 }  

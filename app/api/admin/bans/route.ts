@@ -5,7 +5,7 @@ import { logActivity } from '@/lib/activity'
 
 export async function GET() {
   const profile = await getProfile()
-  if (!profile || profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'owner')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const admin = createAdminClient()
   const { data } = await admin.from('bans').select('*').order('created_at', { ascending: false })
@@ -14,7 +14,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const profile = await getProfile()
-  if (!profile || profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'owner')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { type, value, reason, expires_at } = await request.json()
   if (!type || !value) return NextResponse.json({ error: 'type and value required' }, { status: 400 })
@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
   if (type === 'user') {
     const { data: target, error: targetError } = await admin.from('users').select('role').eq('id', value).single()
     if (targetError) return NextResponse.json({ error: targetError.message }, { status: 400 })
-    if (target?.role === 'admin') {
-      return NextResponse.json({ error: 'Admin accounts cannot be banned' }, { status: 403 })
+    if (target?.role === 'admin' || target?.role === 'owner') {
+      return NextResponse.json({ error: 'Admin and owner accounts cannot be banned' }, { status: 403 })
     }
   }
 

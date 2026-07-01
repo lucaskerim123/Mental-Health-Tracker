@@ -19,7 +19,7 @@ async function loadRolePermissions(admin: ReturnType<typeof createAdminClient>):
 
 export async function GET() {
   const profile = await getProfile()
-  if (!profile || profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'owner')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const admin = createAdminClient()
   const rolePermissions = await loadRolePermissions(admin)
@@ -28,13 +28,13 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const profile = await getProfile()
-  if (!profile || profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'owner')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { role, permissions } = await request.json()
   if (!role || !permissions) return NextResponse.json({ error: 'role and permissions required' }, { status: 400 })
   if (!ROLE_PERMISSION_ROLES.includes(role as Role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
   if (!ROLE_PERMISSION_EDITABLE_ROLES.includes(role as Role)) {
-    return NextResponse.json({ error: 'Admin permissions cannot be edited' }, { status: 403 })
+    return NextResponse.json({ error: 'Owner permissions cannot be edited' }, { status: 403 })
   }
 
   const safeRole = role as Role

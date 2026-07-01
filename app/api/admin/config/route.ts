@@ -11,7 +11,7 @@ async function sha256(str: string): Promise<string> {
 
 export async function GET() {
   const profile = await getProfile()
-  if (!profile || profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'owner')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const admin = createAdminClient()
   const { data } = await admin.from('site_config').select('key, value, updated_at')
@@ -20,7 +20,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const profile = await getProfile()
-  if (!profile || profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'owner')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { key, value } = await request.json()
   if (!key) return NextResponse.json({ error: 'key required' }, { status: 400 })

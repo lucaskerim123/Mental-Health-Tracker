@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { Trash2, Save, ChevronDown, ChevronRight, Lock, Unlock, AlertTriangle, KeyRound } from 'lucide-react'
 import type { UserProfile, Permission, Resource, Action, Role, ActivityLog } from '@/lib/supabase/types'
 import { cn, formatDateTime } from '@/lib/utils'
-import { ROLE_PERMISSION_ACTIONS, ROLE_PERMISSION_RESOURCES, type RolePermissionsMatrix } from '@/lib/role-permissions'
+import { ADMIN_SECTION_RESOURCES, MAIN_PAGE_RESOURCES, ROLE_PERMISSION_ACTIONS, ROLE_PERMISSION_RESOURCES, type RolePermissionsMatrix } from '@/lib/role-permissions'
 
 interface Props {
   user: UserProfile
@@ -48,6 +48,7 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
   const [roleChanged, setRoleChanged] = useState(false)
   const [permMap, setPermMap] = useState<PermMap>(buildPermMap(permissions))
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [sectionExpanded, setSectionExpanded] = useState({ main: true, admin: true })
   const [toggling, setToggling] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [newPassword, setNewPassword] = useState('')
@@ -162,7 +163,7 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
   }
 
   const profileChanged = displayName !== user.display_name || role !== user.role
-  const total = totalOverrides(permMap)
+const total = totalOverrides(permMap)
   const recentIps = Array.from(new Set(activityLogs.map(log => log.ip_address).filter((value): value is string => !!value))).slice(0, 5)
   const recentAgents = Array.from(new Set(activityLogs.map(log => typeof log.metadata?.user_agent === 'string' ? log.metadata.user_agent : null).filter((value): value is string => !!value))).slice(0, 3)
 
@@ -186,6 +187,7 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
               <option value="lawyer">lawyer</option>
               <option value="counsellor">counsellor</option>
               <option value="admin">admin</option>
+              {viewerIsOwner && <option value="owner">owner</option>}
             </select>
           </div>
           <div className="space-y-1.5">
@@ -270,75 +272,87 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
           <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">Permissions</p>
           {total > 0 && <span className="text-[9px] font-mono text-zinc-600 tracking-widest">{total} override{total !== 1 ? 's' : ''} active</span>}
         </div>
-        <div className="divide-y divide-zinc-800/60">
-          {RESOURCES.map(resource => {
-            const actions = ROLE_PERMISSION_ACTIONS[resource]
-            const count = overrideCount(permMap, resource)
-            const isOpen = expanded[resource] ?? false
-            return (
-              <div key={resource}>
-                <div className="flex items-center gap-3 px-5 py-3">
-                  <button type="button" onClick={() => setExpanded(prev => ({ ...prev, [resource]: !isOpen }))} className="flex items-center gap-2 flex-1 text-left">
-                    {isOpen ? <ChevronDown className="w-3 h-3 text-zinc-600 shrink-0" /> : <ChevronRight className="w-3 h-3 text-zinc-600 shrink-0" />}
-                    <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">{resource}</span>
-                    {count > 0 && <span className="text-[9px] font-mono bg-zinc-800 text-zinc-500 px-1.5 py-0.5 tracking-wider">{count} override{count !== 1 ? 's' : ''}</span>}
-                  </button>
-                  {!isMe && (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button type="button" onClick={() => resetResource(resource)} className="text-[9px] font-mono text-zinc-600 hover:text-zinc-400 tracking-widest uppercase px-2 py-1 border border-zinc-800 hover:border-zinc-600 transition-colors">Reset</button>
-                      <button type="button" onClick={() => setResourceAll(resource, true)} className="text-[9px] font-mono text-green-900 hover:text-green-700 tracking-widest uppercase px-2 py-1 border border-green-900/30 hover:border-green-800 transition-colors">Grant All</button>
-                      <button type="button" onClick={() => setResourceAll(resource, false)} className="text-[9px] font-mono text-red-900 hover:text-red-700 tracking-widest uppercase px-2 py-1 border border-red-900/30 hover:border-red-800 transition-colors">Deny All</button>
-                    </div>
-                  )}
-                </div>
-                {isOpen && (
-                  <div className="border-t border-zinc-800/40">
-                    {actions.map(action => {
-                      const override = permMap[resource]?.[action] ?? null
-                      const def = rolePermissions[user.role]?.[resource]?.includes(action) ?? false
-                      const effective = override !== null ? override : def
-                      const isOverride = override !== null
-                      const key = `${resource}-${action}`
-                      const busy = toggling === key
-                      return (
-                        <div key={action} className="flex items-center justify-between px-8 py-2.5 hover:bg-zinc-900/30 transition-colors">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-mono text-zinc-500 tracking-wide">{action.replace(/_/g, ' ')}</span>
-                            {isOverride && <span className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 bg-zinc-800/60 text-zinc-600">override</span>}
-                          </div>
-                          {isMe ? (
-                            <span className="text-[10px] font-mono text-green-800">{effective ? 'granted' : 'denied'}</span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => !busy && togglePermission(resource, action)}
-                              disabled={busy}
-                              title={`Role default: ${def ? 'granted' : 'denied'}. Click to cycle.`}
-                              className={cn(
-                                'flex items-center gap-1.5 px-3 py-1 text-[10px] font-mono tracking-widest uppercase border transition-colors disabled:opacity-50',
-                                override === null
-                                  ? effective ? 'border-zinc-700 text-zinc-500 bg-zinc-800/30' : 'border-zinc-800 text-zinc-700'
-                                  : override === true ? 'border-green-800 text-green-700 bg-green-950/30'
-                                  : 'border-red-900 text-red-800 bg-red-950/20'
-                              )}
-                            >
-                              {override === null ? (
-                                <>{effective ? <Unlock className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />} {effective ? 'default on' : 'default off'}</>
-                              ) : override === true ? (
-                                <><Unlock className="w-2.5 h-2.5" /> granted</>
-                              ) : (
-                                <><Lock className="w-2.5 h-2.5" /> denied</>
-                              )}
-                            </button>
+        <div className="space-y-3 p-3">
+          {permissionGroups.map(group => (
+            <div key={group.key} className="border border-zinc-800/60">
+              <button type="button" onClick={() => setSectionExpanded(prev => ({ ...prev, [group.key]: !prev[group.key] }))} className="flex w-full items-center justify-between px-4 py-3 text-left">
+                <span className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">{group.label}</span>
+                <span className="text-[10px] font-mono text-zinc-600">{sectionExpanded[group.key] ? 'Hide' : 'Show'}</span>
+              </button>
+              {sectionExpanded[group.key] && (
+                <div className="border-t border-zinc-800/40">
+                  {group.resources.map(resource => {
+                    const actions = ROLE_PERMISSION_ACTIONS[resource]
+                    const count = overrideCount(permMap, resource)
+                    const isOpen = expanded[resource] ?? false
+                    return (
+                      <div key={resource}>
+                        <div className="flex items-center gap-3 px-5 py-3">
+                          <button type="button" onClick={() => setExpanded(prev => ({ ...prev, [resource]: !isOpen }))} className="flex items-center gap-2 flex-1 text-left">
+                            {isOpen ? <ChevronDown className="w-3 h-3 text-zinc-600 shrink-0" /> : <ChevronRight className="w-3 h-3 text-zinc-600 shrink-0" />}
+                            <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">{resource.replace(/_/g, ' ')}</span>
+                            {count > 0 && <span className="text-[9px] font-mono bg-zinc-800 text-zinc-500 px-1.5 py-0.5 tracking-wider">{count} override{count !== 1 ? 's' : ''}</span>}
+                          </button>
+                          {!isMe && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button type="button" onClick={() => resetResource(resource)} className="text-[9px] font-mono text-zinc-600 hover:text-zinc-400 tracking-widest uppercase px-2 py-1 border border-zinc-800 hover:border-zinc-600 transition-colors">Reset</button>
+                              <button type="button" onClick={() => setResourceAll(resource, true)} className="text-[9px] font-mono text-green-900 hover:text-green-700 tracking-widest uppercase px-2 py-1 border border-green-900/30 hover:border-green-800 transition-colors">Grant All</button>
+                              <button type="button" onClick={() => setResourceAll(resource, false)} className="text-[9px] font-mono text-red-900 hover:text-red-700 tracking-widest uppercase px-2 py-1 border border-red-900/30 hover:border-red-800 transition-colors">Deny All</button>
+                            </div>
                           )}
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+                        {isOpen && (
+                          <div className="border-t border-zinc-800/40">
+                            {actions.map(action => {
+                              const override = permMap[resource]?.[action] ?? null
+                              const def = rolePermissions[user.role]?.[resource]?.includes(action) ?? false
+                              const effective = override !== null ? override : def
+                              const isOverride = override !== null
+                              const key = `${resource}-${action}`
+                              const busy = toggling === key
+                              return (
+                                <div key={action} className="flex items-center justify-between px-8 py-2.5 hover:bg-zinc-900/30 transition-colors">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[11px] font-mono text-zinc-500 tracking-wide">{action.replace(/_/g, ' ')}</span>
+                                    {isOverride && <span className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 bg-zinc-800/60 text-zinc-600">override</span>}
+                                  </div>
+                                  {isMe ? (
+                                    <span className="text-[10px] font-mono text-green-800">{effective ? 'granted' : 'denied'}</span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => !busy && togglePermission(resource, action)}
+                                      disabled={busy}
+                                      title={`Role default: ${def ? 'granted' : 'denied'}. Click to cycle.`}
+                                      className={cn(
+                                        'flex items-center gap-1.5 px-3 py-1 text-[10px] font-mono tracking-widest uppercase border transition-colors disabled:opacity-50',
+                                        override === null
+                                          ? effective ? 'border-zinc-700 text-zinc-500 bg-zinc-800/30' : 'border-zinc-800 text-zinc-700'
+                                          : override === true ? 'border-green-800 text-green-700 bg-green-950/30'
+                                          : 'border-red-900 text-red-800 bg-red-950/20'
+                                      )}
+                                    >
+                                      {override === null ? (
+                                        <>{effective ? <Unlock className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />} {effective ? 'default on' : 'default off'}</>
+                                      ) : override === true ? (
+                                        <><Unlock className="w-2.5 h-2.5" /> granted</>
+                                      ) : (
+                                        <><Lock className="w-2.5 h-2.5" /> denied</>
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
         <div className="px-5 py-3 border-t border-zinc-800/60">
           <p className="text-[9px] font-mono text-zinc-700">Bright green = explicit grant · Red = explicit deny · Muted = role default · Click to cycle states</p>
@@ -347,3 +361,7 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
     </div>
   )
 }
+  const permissionGroups = [
+    { key: 'main' as const, label: 'Main Pages', resources: MAIN_PAGE_RESOURCES },
+    { key: 'admin' as const, label: 'Admin Sections', resources: ADMIN_SECTION_RESOURCES },
+  ]

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { formatDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Copy, Trash2, Plus } from 'lucide-react'
@@ -9,7 +8,7 @@ import type { Invite, Role } from '@/lib/supabase/types'
 
 interface Props {
   invites: Invite[]
-  adminId: string
+  canInviteAdmin: boolean
 }
 
 function generateToken(): string {
@@ -37,7 +36,7 @@ Should the path collapse, fall back to this:
 ${url}`
 }
 
-export default function InvitesClient({ invites: initialInvites, adminId }: Props) {
+export default function InvitesClient({ invites: initialInvites, canInviteAdmin }: Props) {
   const [invites, setInvites] = useState(initialInvites)
   const [role, setRole] = useState<Role>('viewer')
   const [expiryDays, setExpiryDays] = useState(7)
@@ -47,12 +46,14 @@ export default function InvitesClient({ invites: initialInvites, adminId }: Prop
     setCreating(true)
     const token = generateToken()
     const expires_at = new Date(Date.now() + expiryDays * 86400000).toISOString()
-    const supabase = createClient()
-    const { error, data } = await supabase.from('invites').insert({
-      token, created_by: adminId, role_to_assign: role, expires_at,
-    }).select().single()
-    if (error) {
-      toast.error('Failed: ' + error.message)
+    const res = await fetch('/api/admin/invites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, role, expires_at }),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      toast.error('Failed: ' + (data?.error ?? 'Unknown error'))
     } else {
       setInvites(prev => [data, ...prev])
       toast.success('Invite created.')
@@ -62,8 +63,16 @@ export default function InvitesClient({ invites: initialInvites, adminId }: Prop
 
   async function deleteInvite(invite: Invite) {
     if (!confirm('Revoke this invite?')) return
-    const supabase = createClient()
-    await supabase.from('invites').delete().eq('id', invite.id)
+    const res = await fetch('/api/admin/invites', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inviteId: invite.id }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      toast.error(data?.error || 'Failed to revoke invite.')
+      return
+    }
     setInvites(prev => prev.filter(i => i.id !== invite.id))
     toast.success('Revoked.')
   }
@@ -89,6 +98,8 @@ export default function InvitesClient({ invites: initialInvites, adminId }: Prop
               <option value="viewer">viewer</option>
               <option value="lawyer">lawyer</option>
               <option value="counsellor">counsellor</option>
+              {canInviteAdmin && <option value="admin">admin</option>}
+              {canInviteAdmin && <option value="owner">owner</option>}
             </select>
           </div>
           <div className="space-y-1">

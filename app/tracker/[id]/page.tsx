@@ -93,7 +93,7 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
   }))
 
   return (
-    <AppShell role={profile.role} displayName={profile.display_name}>
+    <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="md:hidden mb-4">
           <Link href="/tracker" className="inline-flex items-center gap-2 border border-zinc-800 bg-zinc-950 px-3 py-2 text-[10px] font-mono tracking-widest uppercase text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 transition-colors">

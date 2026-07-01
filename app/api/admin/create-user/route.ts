@@ -10,14 +10,14 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: profile } = await supabase.from('users').select('role, display_name').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (profile?.role !== 'admin' && profile?.role !== 'owner') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { email, display_name, password, role } = await req.json()
   if (!email || !display_name || !password || !role) {
     return NextResponse.json({ error: 'All fields required' }, { status: 400 })
   }
-  if (role === 'admin' && !(await isAdminOwner(user.id))) {
-    return NextResponse.json({ error: 'Only the admin owner can create admin accounts' }, { status: 403 })
+  if ((role === 'admin' || role === 'owner') && !(await isAdminOwner(user.id))) {
+    return NextResponse.json({ error: 'Only the owner can create admin or owner accounts' }, { status: 403 })
   }
 
   const admin = createAdminClient()

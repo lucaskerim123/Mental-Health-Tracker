@@ -5,11 +5,12 @@ import { toast } from 'sonner'
 import { RotateCcw, Save, Shield } from 'lucide-react'
 import type { Action, Resource, Role } from '@/lib/supabase/types'
 import {
+  ADMIN_SECTION_RESOURCES,
   cloneRolePermissions,
+  MAIN_PAGE_RESOURCES,
   normalizeRolePermissions,
   ROLE_PERMISSION_EDITABLE_ROLES,
   ROLE_PERMISSION_ACTIONS,
-  ROLE_PERMISSION_RESOURCES,
   type RolePermissionsMatrix,
 } from '@/lib/role-permissions'
 
@@ -22,12 +23,18 @@ export default function RolesTab({ initialRolePermissions }: Props) {
   const [rolePermissions, setRolePermissions] = useState<RolePermissionsMatrix>(cloneRolePermissions(initialRolePermissions))
   const [selectedRole, setSelectedRole] = useState<Role>('viewer')
   const [saving, setSaving] = useState(false)
+  const [sectionOpen, setSectionOpen] = useState({ main: true, admin: true })
 
   const current = rolePermissions[selectedRole]
-  const activeCount = ROLE_PERMISSION_RESOURCES.reduce(
+  const activeCount = [...MAIN_PAGE_RESOURCES, ...ADMIN_SECTION_RESOURCES].reduce(
     (sum, resource) => sum + (current[resource]?.length ?? 0),
     0,
   )
+
+  const groups = [
+    { key: 'main' as const, label: 'Main Pages', resources: MAIN_PAGE_RESOURCES },
+    { key: 'admin' as const, label: 'Admin Sections', resources: ADMIN_SECTION_RESOURCES },
+  ]
 
   function updateRole(next: Partial<Record<Resource, Action[]>>) {
     setRolePermissions(prev => ({
@@ -111,30 +118,46 @@ export default function RolesTab({ initialRolePermissions }: Props) {
         </div>
 
         <div className="space-y-3">
-          {ROLE_PERMISSION_RESOURCES.map(resource => (
-            <div key={resource} className="border border-zinc-800 bg-black/40 p-4">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">{resource}</p>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => setAll(resource, true)} className="text-[9px] font-mono tracking-widest uppercase px-2 py-1 border border-green-900/30 text-green-800 hover:border-green-700 transition-colors">Grant all</button>
-                  <button type="button" onClick={() => setAll(resource, false)} className="text-[9px] font-mono tracking-widest uppercase px-2 py-1 border border-red-900/30 text-red-800 hover:border-red-700 transition-colors">Clear</button>
+          {groups.map(group => (
+            <div key={group.key} className="border border-zinc-800 bg-black/30">
+              <button
+                type="button"
+                onClick={() => setSectionOpen(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
+                className="flex w-full items-center justify-between px-4 py-3 text-left"
+              >
+                <span className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">{group.label}</span>
+                <span className="text-[10px] font-mono text-zinc-600">{sectionOpen[group.key] ? 'Hide' : 'Show'}</span>
+              </button>
+              {sectionOpen[group.key] && (
+                <div className="space-y-3 border-t border-zinc-800 p-4">
+                  {group.resources.map(resource => (
+                    <div key={resource} className="border border-zinc-800 bg-black/40 p-4">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">{resource.replace(/_/g, ' ')}</p>
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => setAll(resource, true)} className="text-[9px] font-mono tracking-widest uppercase px-2 py-1 border border-green-900/30 text-green-800 hover:border-green-700 transition-colors">Grant all</button>
+                          <button type="button" onClick={() => setAll(resource, false)} className="text-[9px] font-mono tracking-widest uppercase px-2 py-1 border border-red-900/30 text-red-800 hover:border-red-700 transition-colors">Clear</button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {ROLE_PERMISSION_ACTIONS[resource].map(action => {
+                          const active = current[resource]?.includes(action) ?? false
+                          return (
+                            <button
+                              key={action}
+                              type="button"
+                              onClick={() => toggleAction(resource, action)}
+                              className={`px-3 py-1.5 text-[10px] font-mono tracking-widest uppercase border transition-colors ${active ? 'border-green-800 bg-green-950/30 text-green-700' : 'border-zinc-800 text-zinc-600 hover:border-zinc-700 hover:text-zinc-400'}`}
+                            >
+                              {action.replace(/_/g, ' ')}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {ROLE_PERMISSION_ACTIONS[resource].map(action => {
-                  const active = current[resource]?.includes(action) ?? false
-                  return (
-                    <button
-                      key={action}
-                      type="button"
-                      onClick={() => toggleAction(resource, action)}
-                      className={`px-3 py-1.5 text-[10px] font-mono tracking-widest uppercase border transition-colors ${active ? 'border-green-800 bg-green-950/30 text-green-700' : 'border-zinc-800 text-zinc-600 hover:border-zinc-700 hover:text-zinc-400'}`}
-                    >
-                      {action.replace(/_/g, ' ')}
-                    </button>
-                  )
-                })}
-              </div>
+              )}
             </div>
           ))}
         </div>

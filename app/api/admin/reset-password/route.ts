@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: profile } = await supabase.from('users').select('role, display_name').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (profile?.role !== 'admin' && profile?.role !== 'owner') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { userId, password } = await req.json()
   if (!userId || !password) {
@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient()
   const { data: targetProfile } = await admin.from('users').select('role').eq('id', userId).single()
-  if (targetProfile?.role === 'admin' && !(await isAdminOwner(user.id))) {
-    return NextResponse.json({ error: 'Only the admin owner can reset another admin password' }, { status: 403 })
+  if ((targetProfile?.role === 'admin' || targetProfile?.role === 'owner') && !(await isAdminOwner(user.id))) {
+    return NextResponse.json({ error: 'Only the owner can reset another admin or owner password' }, { status: 403 })
   }
 
   const { data: targetUser, error: lookupError } = await admin.auth.admin.getUserById(userId)

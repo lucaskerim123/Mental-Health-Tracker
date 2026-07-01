@@ -8,12 +8,16 @@ import { LayoutDashboard, Activity, Pill, FileText, Users, LogOut, Menu, X } fro
 import { cn } from '@/lib/utils'
 import AESTClock from '@/components/AESTClock'
 import SecurePortalLink from './SecurePortalLink'
+import { ADMIN_SECTIONS } from '@/lib/navigation'
+import type { Resource, Role } from '@/lib/supabase/types'
 
 interface SidebarProps {
   role: string
   displayName: string
   lockdownActive: boolean
   hasPin: boolean
+  canViewAdmin: boolean
+  allowedAdminSections: Resource[]
 }
 
 const navItems = [
@@ -23,7 +27,10 @@ const navItems = [
   { href: '/documents', label: 'Documents', icon: FileText },
 ]
 
-function NavLinks({ role, pathname, onNavigate }: { role: string; pathname: string; onNavigate?: () => void }) {
+function NavLinks({ role, pathname, canViewAdmin, allowedAdminSections, onNavigate }: { role: string; pathname: string; canViewAdmin: boolean; allowedAdminSections: Resource[]; onNavigate?: () => void }) {
+  const [adminOpen, setAdminOpen] = useState(pathname.startsWith('/admin'))
+  const visibleAdminSections = ADMIN_SECTIONS.filter(section => allowedAdminSections.includes(section.id))
+
   return (
     <div className="flex flex-col gap-0.5">
       {navItems.map(({ href, label, icon: Icon }) => (
@@ -42,29 +49,54 @@ function NavLinks({ role, pathname, onNavigate }: { role: string; pathname: stri
           {label}
         </Link>
       ))}
-      {role === 'admin' && (
-        <Link
-          href="/admin"
-          onClick={onNavigate}
-          className={cn(
-            'flex items-center gap-3 px-3 py-2.5 text-[11px] font-mono tracking-wide transition-colors rounded-none',
-            pathname.startsWith('/admin')
-              ? 'text-white bg-zinc-800 border-l-2 border-red-500'
-              : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border-l-2 border-transparent'
+      {canViewAdmin && visibleAdminSections.length > 0 && (
+        <div className="border-t border-zinc-800/60 mt-2 pt-2">
+          <button
+            type="button"
+            onClick={() => setAdminOpen(prev => !prev)}
+            className={cn(
+              'flex w-full items-center justify-between gap-3 px-3 py-2.5 text-[11px] font-mono tracking-wide transition-colors rounded-none',
+              pathname.startsWith('/admin')
+                ? 'text-white bg-zinc-800 border-l-2 border-red-500'
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border-l-2 border-transparent'
+            )}
+          >
+            <span className="flex items-center gap-3">
+              <Users className="w-3.5 h-3.5 shrink-0" />
+              Admin
+            </span>
+            <span className="text-[10px]">{adminOpen ? '−' : '+'}</span>
+          </button>
+          {adminOpen && (
+            <div className="mt-1 flex flex-col gap-0.5">
+              {visibleAdminSections.map(section => (
+                <Link
+                  key={section.id}
+                  href={section.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    'ml-4 flex items-center gap-3 px-3 py-2 text-[10px] font-mono tracking-widest uppercase transition-colors rounded-none',
+                    pathname === section.href || (section.href.startsWith('/admin?tab=') && pathname === '/admin')
+                      ? 'text-zinc-200 bg-zinc-900 border-l-2 border-zinc-500'
+                      : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/70 border-l-2 border-transparent'
+                  )}
+                >
+                  {section.label}
+                </Link>
+              ))}
+            </div>
           )}
-        >
-          <Users className="w-3.5 h-3.5 shrink-0" />
-          Admin
-        </Link>
+        </div>
       )}
     </div>
   )
 }
 
-export default function Sidebar({ role, displayName, lockdownActive, hasPin }: SidebarProps) {
+export default function Sidebar({ role, displayName, lockdownActive, hasPin, canViewAdmin, allowedAdminSections }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const canUseLockdownControls = role === 'admin' || role === 'owner'
 
   async function signOut() {
     const supabase = createClient()
@@ -72,7 +104,9 @@ export default function Sidebar({ role, displayName, lockdownActive, hasPin }: S
     router.push('/login')
   }
 
-  const roleColor = role === 'admin'
+  const roleColor = role === 'owner'
+    ? 'text-red-500'
+    : role === 'admin'
     ? 'text-red-800'
     : role === 'lawyer'
       ? 'text-blue-800'
@@ -84,7 +118,7 @@ export default function Sidebar({ role, displayName, lockdownActive, hasPin }: S
     <>
       {/* Mobile header bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-12 bg-zinc-900 border-b border-zinc-700 flex items-center justify-between px-4">
-        <SecurePortalLink isAdmin={role === 'admin'} lockdownActive={lockdownActive} hasPin={hasPin} mobile />
+        <SecurePortalLink isAdmin={canUseLockdownControls} lockdownActive={lockdownActive} hasPin={hasPin} mobile />
         <div className="flex items-center gap-3">
           <AESTClock />
           <button
@@ -112,7 +146,7 @@ export default function Sidebar({ role, displayName, lockdownActive, hasPin }: S
       )}>
         <div className="flex items-center justify-between px-4 h-12 border-b border-zinc-700 shrink-0">
           <SecurePortalLink
-            isAdmin={role === 'admin'}
+            isAdmin={canUseLockdownControls}
             lockdownActive={lockdownActive}
             hasPin={hasPin}
             mobile
@@ -123,7 +157,7 @@ export default function Sidebar({ role, displayName, lockdownActive, hasPin }: S
           </button>
         </div>
         <nav className="flex-1 px-2 py-4 overflow-y-auto">
-          <NavLinks role={role} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+          <NavLinks role={role} pathname={pathname} canViewAdmin={canViewAdmin} allowedAdminSections={allowedAdminSections} onNavigate={() => setMobileOpen(false)} />
         </nav>
         <div className="px-4 py-4 border-t border-zinc-700 shrink-0">
           <p className="text-[10px] font-mono text-zinc-400 truncate">{displayName}</p>
@@ -141,12 +175,12 @@ export default function Sidebar({ role, displayName, lockdownActive, hasPin }: S
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col fixed top-0 left-0 bottom-0 w-[220px] bg-zinc-900 border-r border-zinc-700 z-30">
         <div className="px-4 py-4 border-b border-zinc-700 shrink-0">
-          <div className="mb-3"><SecurePortalLink isAdmin={role === 'admin'} lockdownActive={lockdownActive} hasPin={hasPin} /></div>
+          <div className="mb-3"><SecurePortalLink isAdmin={canUseLockdownControls} lockdownActive={lockdownActive} hasPin={hasPin} /></div>
           <AESTClock />
         </div>
 
         <nav className="flex-1 px-2 py-4 overflow-y-auto">
-          <NavLinks role={role} pathname={pathname} />
+          <NavLinks role={role} pathname={pathname} canViewAdmin={canViewAdmin} allowedAdminSections={allowedAdminSections} />
         </nav>
 
         <div className="px-4 py-4 border-t border-zinc-700 shrink-0">
