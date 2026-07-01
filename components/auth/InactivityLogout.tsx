@@ -12,7 +12,7 @@ const ACTIVITY_EVENTS = ['click', 'keydown', 'mousemove', 'mousedown', 'touchsta
 export default function InactivityLogout() {
   const router = useRouter()
   const pathname = usePathname()
-  const timeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
+  const timeoutRef = useRef<number | null>(null)
   const loggingOutRef = useRef(false)
 
   useEffect(() => {
