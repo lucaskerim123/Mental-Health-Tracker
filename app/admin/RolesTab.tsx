@@ -5,11 +5,13 @@ import { toast } from 'sonner'
 import { RotateCcw, Save, Shield } from 'lucide-react'
 import type { Action, Resource, Role } from '@/lib/supabase/types'
 import {
+  ACTION_LABELS,
   cloneRolePermissions,
   normalizeRolePermissions,
   ROLE_PERMISSION_EDITABLE_ROLES,
   ROLE_PERMISSION_ACTIONS,
   ROLE_PERMISSION_RESOURCES,
+  RESOURCE_LABELS,
   type RolePermissionsMatrix,
 } from '@/lib/role-permissions'
 
@@ -115,7 +117,7 @@ export default function RolesTab({ initialRolePermissions }: Props) {
             <div key={resource} className="border border-zinc-800 bg-black/40 p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div>
-                  <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">{resource.replace(/_/g, ' ')}</p>
+                  <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">{RESOURCE_LABELS[resource]}</p>
                   <p className="mt-1 text-[10px] font-mono text-zinc-700">{ROLE_PERMISSION_ACTIONS[resource].length} permission toggle{ROLE_PERMISSION_ACTIONS[resource].length !== 1 ? 's' : ''}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -133,7 +135,7 @@ export default function RolesTab({ initialRolePermissions }: Props) {
                       onClick={() => toggleAction(resource, action)}
                       className={`px-3 py-1.5 text-[10px] font-mono tracking-widest uppercase border transition-colors ${active ? 'border-green-800 bg-green-950/30 text-green-700' : 'border-zinc-800 text-zinc-600 hover:border-zinc-700 hover:text-zinc-400'}`}
                     >
-                      {action.replace(/_/g, ' ')}
+                      {ACTION_LABELS[action]}
                     </button>
                   )
                 })}

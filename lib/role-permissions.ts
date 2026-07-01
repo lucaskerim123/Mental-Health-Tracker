@@ -23,6 +23,31 @@ export const ROLE_PERMISSION_ACTIONS: Record<Resource, Action[]> = {
   admin_invites: ['view', 'manage_invites'],
 }
 
+export const RESOURCE_LABELS: Record<Resource, string> = {
+  dashboard: 'Dashboard',
+  incidents: 'Incidents',
+  tracker: 'Session Tracker',
+  documents: 'Documents',
+  admin: 'Admin Panel',
+  admin_users: 'Admin Users',
+  admin_roles: 'Admin Roles',
+  admin_bans: 'Admin Bans',
+  admin_activity: 'Admin Activity Logs',
+  admin_config: 'Admin Config',
+  admin_lockdown: 'Admin Lockdown',
+  admin_invites: 'Admin Invites',
+}
+
+export const ACTION_LABELS: Record<Action, string> = {
+  view: 'Can view',
+  view_sensitive: 'Can view sensitive',
+  create: 'Can create',
+  edit: 'Can edit',
+  delete: 'Can delete',
+  manage_users: 'Can manage users',
+  manage_invites: 'Can manage invites',
+}
+
 export type RolePermissionsMatrix = Record<Role, Partial<Record<Resource, Action[]>>>
 
 export function cloneRolePermissions(matrix: RolePermissionsMatrix): RolePermissionsMatrix {

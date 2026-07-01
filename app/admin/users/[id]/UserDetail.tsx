@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { Trash2, Save, ChevronDown, ChevronRight, Lock, Unlock, AlertTriangle, KeyRound } from 'lucide-react'
 import type { UserProfile, Permission, Resource, Action, Role, ActivityLog } from '@/lib/supabase/types'
 import { cn, formatDateTime } from '@/lib/utils'
-import { ADMIN_SECTION_RESOURCES, MAIN_PAGE_RESOURCES, ROLE_PERMISSION_ACTIONS, ROLE_PERMISSION_RESOURCES, type RolePermissionsMatrix } from '@/lib/role-permissions'
+import { ACTION_LABELS, ADMIN_SECTION_RESOURCES, MAIN_PAGE_RESOURCES, RESOURCE_LABELS, ROLE_PERMISSION_ACTIONS, ROLE_PERMISSION_RESOURCES, type RolePermissionsMatrix } from '@/lib/role-permissions'
 
 interface Props {
   user: UserProfile
@@ -243,7 +243,7 @@ const total = totalOverrides(permMap)
         </div>
       </div>
 
-      <div className="border border-zinc-800 bg-zinc-950 p-5 space-y-4">
+      {!ownerLocked && <div className="border border-zinc-800 bg-zinc-950 p-5 space-y-4">
         <div>
           <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">Identifiers</p>
           <p className="mt-1 text-[10px] font-mono text-zinc-700">Recent request fingerprints pulled from activity logs for this account.</p>
@@ -267,7 +267,7 @@ const total = totalOverrides(permMap)
             </div>
           )) : <p className="text-[10px] font-mono text-zinc-700">No activity logged yet.</p>}
         </div>
-      </div>
+      </div>}
 
       <div className="border border-zinc-800 bg-zinc-950">
         <div className="px-5 py-3 border-b border-zinc-800 flex items-center justify-between">
@@ -297,7 +297,7 @@ const total = totalOverrides(permMap)
                         <div className="flex items-center gap-3 px-5 py-3">
                           <button type="button" onClick={() => setExpanded(prev => ({ ...prev, [resource]: !isOpen }))} className="flex items-center gap-2 flex-1 text-left">
                             {isOpen ? <ChevronDown className="w-3 h-3 text-zinc-600 shrink-0" /> : <ChevronRight className="w-3 h-3 text-zinc-600 shrink-0" />}
-                            <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">{resource.replace(/_/g, ' ')}</span>
+                            <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">{RESOURCE_LABELS[resource]}</span>
                             {count > 0 && <span className="text-[9px] font-mono bg-zinc-800 text-zinc-500 px-1.5 py-0.5 tracking-wider">{count} override{count !== 1 ? 's' : ''}</span>}
                           </button>
                           {canEditPermissions && (
@@ -320,7 +320,7 @@ const total = totalOverrides(permMap)
                               return (
                                 <div key={action} className="flex items-center justify-between px-8 py-2.5 hover:bg-zinc-900/30 transition-colors">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-[11px] font-mono text-zinc-500 tracking-wide">{action.replace(/_/g, ' ')}</span>
+                                    <span className="text-[11px] font-mono text-zinc-500 tracking-wide">{ACTION_LABELS[action]}</span>
                                     {isOverride && <span className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 bg-zinc-800/60 text-zinc-600">override</span>}
                                   </div>
                                   {!canEditPermissions ? (
