@@ -47,6 +47,9 @@ export function can(
   action: Action,
   roleDefaults: RolePermissionsMatrix = ROLE_DEFAULTS as RolePermissionsMatrix
 ): boolean {
+  // Owner is untouchable and should never lose access because of stale overrides.
+  if (profile.role === 'owner') return true
+
   // Check explicit override first
   const override = overrides.find(p => p.resource === resource && p.action === action)
   if (override) return override.granted
