@@ -12,6 +12,8 @@ import SecurePortalLink from './SecurePortalLink'
 interface SidebarProps {
   role: string
   displayName: string
+  lockdownActive: boolean
+  hasPin: boolean
 }
 
 const navItems = [
@@ -59,7 +61,7 @@ function NavLinks({ role, pathname, onNavigate }: { role: string; pathname: stri
   )
 }
 
-export default function Sidebar({ role, displayName }: SidebarProps) {
+export default function Sidebar({ role, displayName, lockdownActive, hasPin }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -82,7 +84,7 @@ export default function Sidebar({ role, displayName }: SidebarProps) {
     <>
       {/* Mobile header bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-12 bg-zinc-900 border-b border-zinc-700 flex items-center justify-between px-4">
-        <SecurePortalLink isAdmin={role === 'admin'} mobile />
+        <SecurePortalLink isAdmin={role === 'admin'} lockdownActive={lockdownActive} hasPin={hasPin} mobile />
         <div className="flex items-center gap-3">
           <AESTClock />
           <button
@@ -109,7 +111,13 @@ export default function Sidebar({ role, displayName }: SidebarProps) {
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <div className="flex items-center justify-between px-4 h-12 border-b border-zinc-700 shrink-0">
-          <div onClick={() => setMobileOpen(false)}><SecurePortalLink isAdmin={role === 'admin'} mobile /></div>
+          <SecurePortalLink
+            isAdmin={role === 'admin'}
+            lockdownActive={lockdownActive}
+            hasPin={hasPin}
+            mobile
+            onNavigate={() => setMobileOpen(false)}
+          />
           <button onClick={() => setMobileOpen(false)} className="text-zinc-600 hover:text-zinc-400 p-1">
             <X className="w-4 h-4" />
           </button>
@@ -133,7 +141,7 @@ export default function Sidebar({ role, displayName }: SidebarProps) {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col fixed top-0 left-0 bottom-0 w-[220px] bg-zinc-900 border-r border-zinc-700 z-30">
         <div className="px-4 py-4 border-b border-zinc-700 shrink-0">
-          <div className="mb-3"><SecurePortalLink isAdmin={role === 'admin'} /></div>
+          <div className="mb-3"><SecurePortalLink isAdmin={role === 'admin'} lockdownActive={lockdownActive} hasPin={hasPin} /></div>
           <AESTClock />
         </div>
 

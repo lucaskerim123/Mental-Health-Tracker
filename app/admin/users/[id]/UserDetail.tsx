@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Trash2, Save, ChevronDown, ChevronRight, Lock, Unlock, AlertTriangle, KeyRound } from 'lucide-react'
-import type { UserProfile, Permission, Resource, Action, Role } from '@/lib/supabase/types'
-import { cn } from '@/lib/utils'
+import type { UserProfile, Permission, Resource, Action, Role, ActivityLog } from '@/lib/supabase/types'
+import { cn, formatDateTime } from '@/lib/utils'
 import { ROLE_PERMISSION_ACTIONS, ROLE_PERMISSION_RESOURCES, type RolePermissionsMatrix } from '@/lib/role-permissions'
 
 interface Props {
@@ -15,6 +15,9 @@ interface Props {
   permissions: Permission[]
   currentUserId: string
   rolePermissions: RolePermissionsMatrix
+  activityLogs: ActivityLog[]
+  viewerIsOwner: boolean
+  targetIsOwner: boolean
 }
 
 const RESOURCES: Resource[] = ROLE_PERMISSION_RESOURCES
@@ -38,7 +41,7 @@ function totalOverrides(permMap: PermMap): number {
   return RESOURCES.reduce((sum, r) => sum + overrideCount(permMap, r), 0)
 }
 
-export default function UserDetail({ user: initialUser, email, permissions, currentUserId, rolePermissions }: Props) {
+export default function UserDetail({ user: initialUser, email, permissions, currentUserId, rolePermissions, activityLogs, viewerIsOwner, targetIsOwner }: Props) {
   const [user, setUser] = useState(initialUser)
   const [displayName, setDisplayName] = useState(initialUser.display_name)
   const [role, setRole] = useState<Role>(initialUser.role)
@@ -52,13 +55,23 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
   const [resettingPassword, setResettingPassword] = useState(false)
   const router = useRouter()
   const isMe = user.id === currentUserId
+  const canChangeAdminRole = viewerIsOwner
+  const canEditTarget = !targetIsOwner || isMe
+  const canEditDisplayName = canEditTarget && !isMe
+  const canDeleteTarget = !isMe && (!targetIsOwner || viewerIsOwner)
+  const canResetPassword = !targetIsOwner || viewerIsOwner
   const supabase = createClient()
 
   async function saveProfile() {
     setSaving(true)
-    const { error } = await supabase.from('users').update({ display_name: displayName, role }).eq('id', user.id)
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id, display_name: displayName, role }),
+    })
+    const data = await res.json().catch(() => null)
     setSaving(false)
-    if (error) { toast.error('Save failed: ' + error.message); return }
+    if (!res.ok) { toast.error(data?.error || 'Save failed'); return }
     setUser(u => ({ ...u, display_name: displayName, role }))
     setRoleChanged(false)
     toast.success('Profile saved.')
@@ -150,6 +163,8 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
 
   const profileChanged = displayName !== user.display_name || role !== user.role
   const total = totalOverrides(permMap)
+  const recentIps = Array.from(new Set(activityLogs.map(log => log.ip_address).filter((value): value is string => !!value))).slice(0, 5)
+  const recentAgents = Array.from(new Set(activityLogs.map(log => typeof log.metadata?.user_agent === 'string' ? log.metadata.user_agent : null).filter((value): value is string => !!value))).slice(0, 3)
 
   return (
     <div className="space-y-6">
@@ -158,7 +173,7 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
           <div className="space-y-1.5">
             <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Display Name</label>
-            <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} disabled={isMe} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-600 transition-colors disabled:opacity-40" />
+            <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} disabled={!canEditDisplayName} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-600 transition-colors disabled:opacity-40" />
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Email</label>
@@ -166,7 +181,7 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Role</label>
-            <select value={role} onChange={e => { setRole(e.target.value as Role); setRoleChanged(true) }} disabled={isMe} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none disabled:opacity-40">
+            <select value={role} onChange={e => { setRole(e.target.value as Role); setRoleChanged(true) }} disabled={isMe || (user.role === 'admin' && !canChangeAdminRole) || (role === 'admin' && !canChangeAdminRole) || targetIsOwner} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none disabled:opacity-40">
               <option value="viewer">viewer</option>
               <option value="lawyer">lawyer</option>
               <option value="counsellor">counsellor</option>
@@ -178,6 +193,12 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
             <input type="text" value={new Date(user.created_at).toLocaleDateString()} readOnly className="w-full bg-black border border-zinc-800/50 text-zinc-500 px-3 py-2 text-sm font-mono cursor-default" />
           </div>
         </div>
+        {targetIsOwner && (
+          <div className="flex items-start gap-2 border border-red-900/40 bg-red-950/10 px-3 py-2 mb-4">
+            <AlertTriangle className="w-3 h-3 text-red-700 mt-0.5 shrink-0" />
+            <p className="text-[10px] font-mono text-red-700/80">This is the owner account. Other users cannot change or remove it.</p>
+          </div>
+        )}
         {roleChanged && (
           <div className="flex items-start gap-2 border border-amber-900/40 bg-amber-950/10 px-3 py-2 mb-4">
             <AlertTriangle className="w-3 h-3 text-amber-700 mt-0.5 shrink-0" />
@@ -185,11 +206,11 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
           </div>
         )}
         <div className="flex items-center justify-between">
-          <button onClick={saveProfile} disabled={!profileChanged || saving || isMe} className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-zinc-500 text-[11px] font-mono tracking-widest uppercase transition-colors disabled:opacity-30">
+          <button onClick={saveProfile} disabled={!profileChanged || saving || isMe || !canEditTarget} className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-zinc-500 text-[11px] font-mono tracking-widest uppercase transition-colors disabled:opacity-30">
             <Save className="w-3 h-3" />
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
-          {!isMe && (
+          {canDeleteTarget && (
             <button onClick={deleteUser} className="flex items-center gap-2 px-4 py-2 border border-red-900/40 text-red-800 hover:border-red-700 hover:text-red-600 text-[11px] font-mono tracking-widest uppercase transition-colors">
               <Trash2 className="w-3 h-3" /> Delete Account
             </button>
@@ -210,11 +231,37 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
           </div>
         </div>
         <div className="flex items-center gap-3 mt-4 flex-wrap">
-          <button onClick={resetPassword} disabled={resettingPassword || !newPassword || !confirmPassword} className="flex items-center gap-2 px-4 py-2 border border-amber-900/50 text-amber-700 hover:border-amber-700 text-[11px] font-mono tracking-widest uppercase transition-colors disabled:opacity-30">
+          <button onClick={resetPassword} disabled={!canResetPassword || resettingPassword || !newPassword || !confirmPassword} className="flex items-center gap-2 px-4 py-2 border border-amber-900/50 text-amber-700 hover:border-amber-700 text-[11px] font-mono tracking-widest uppercase transition-colors disabled:opacity-30">
             <KeyRound className="w-3 h-3" />
             {resettingPassword ? 'Resetting...' : 'Reset Password'}
           </button>
           <p className="text-[10px] font-mono text-zinc-700">Admins can replace the current password for this account.</p>
+        </div>
+      </div>
+
+      <div className="border border-zinc-800 bg-zinc-950 p-5 space-y-4">
+        <div>
+          <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">Identifiers</p>
+          <p className="mt-1 text-[10px] font-mono text-zinc-700">Recent request fingerprints pulled from activity logs for this account.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Recent IPs</p>
+            {recentIps.length ? recentIps.map(ip => <p key={ip} className="text-xs font-mono text-zinc-300 break-all">{ip}</p>) : <p className="text-[10px] font-mono text-zinc-700">No IPs logged yet.</p>}
+          </div>
+          <div className="space-y-2">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">User Agents</p>
+            {recentAgents.length ? recentAgents.map(agent => <p key={agent} className="text-[10px] font-mono text-zinc-300 break-words [overflow-wrap:anywhere]">{agent}</p>) : <p className="text-[10px] font-mono text-zinc-700">No user agents logged yet.</p>}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Recent Activity</p>
+          {activityLogs.length ? activityLogs.slice(0, 10).map(log => (
+            <div key={log.id} className="border border-zinc-800 bg-black/30 px-3 py-2">
+              <p className="text-[10px] font-mono text-zinc-400">{log.action} · {formatDateTime(log.created_at)}</p>
+              {log.ip_address && <p className="text-[10px] font-mono text-zinc-600">IP: {log.ip_address}</p>}
+            </div>
+          )) : <p className="text-[10px] font-mono text-zinc-700">No activity logged yet.</p>}
         </div>
       </div>
 

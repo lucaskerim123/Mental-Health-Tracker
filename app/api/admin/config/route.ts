@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const { error } = await admin.from('site_config')
       .upsert({ key: 'lockdown_pin_hash', value: hash, updated_by: profile.id, updated_at: new Date().toISOString() })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    await logActivity({ userId: profile.id, displayName: profile.display_name, action: 'update_lockdown_pin' })
+    await logActivity({ userId: profile.id, displayName: profile.display_name, action: 'update_lockdown_pin', request })
     return NextResponse.json({ ok: true })
   }
 
@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       userId: profile.id,
       displayName: profile.display_name,
       action: value === 'true' ? 'lockdown_enable' : 'lockdown_disable',
+      request,
     })
   } else {
     await logActivity({
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
       displayName: profile.display_name,
       action: 'update_config',
       metadata: { key, value },
+      request,
     })
   }
 

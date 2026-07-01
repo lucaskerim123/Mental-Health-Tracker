@@ -2,6 +2,7 @@ import type { Action, Resource, Role } from './supabase/types'
 import { ROLE_DEFAULTS } from './supabase/types'
 
 export const ROLE_PERMISSION_ROLES: Role[] = ['viewer', 'lawyer', 'counsellor', 'admin']
+export const ROLE_PERMISSION_EDITABLE_ROLES: Role[] = ['viewer', 'lawyer', 'counsellor']
 
 export const ROLE_PERMISSION_RESOURCES: Resource[] = ['incidents', 'tracker', 'documents', 'users', 'admin']
 
@@ -33,6 +34,7 @@ export function normalizeRolePermissions(matrix: Partial<RolePermissionsMatrix> 
   const next = cloneRolePermissions(ROLE_DEFAULTS as RolePermissionsMatrix)
 
   for (const role of ROLE_PERMISSION_ROLES) {
+    if (role === 'admin') continue
     for (const resource of ROLE_PERMISSION_RESOURCES) {
       const actions = matrix?.[role]?.[resource]
       if (Array.isArray(actions)) {
@@ -40,6 +42,8 @@ export function normalizeRolePermissions(matrix: Partial<RolePermissionsMatrix> 
       }
     }
   }
+
+  next.admin = cloneRolePermissions(ROLE_DEFAULTS as RolePermissionsMatrix).admin
 
   return next
 }

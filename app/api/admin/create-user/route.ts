@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activity'
+import { isAdminOwner } from '@/lib/admin-owner'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -14,6 +15,9 @@ export async function POST(req: NextRequest) {
   const { email, display_name, password, role } = await req.json()
   if (!email || !display_name || !password || !role) {
     return NextResponse.json({ error: 'All fields required' }, { status: 400 })
+  }
+  if (role === 'admin' && !(await isAdminOwner(user.id))) {
+    return NextResponse.json({ error: 'Only the admin owner can create admin accounts' }, { status: 403 })
   }
 
   const admin = createAdminClient()
@@ -42,6 +46,7 @@ export async function POST(req: NextRequest) {
     resourceType: 'user',
     resourceId: uid,
     metadata: { email, display_name, role },
+    request: req,
   })
 
   return NextResponse.json({ id: uid, display_name, role, email, created_at: new Date().toISOString() })

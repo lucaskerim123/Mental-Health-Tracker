@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Lock } from 'lucide-react'
 
@@ -38,31 +37,16 @@ export default function NewTrackerForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    const payload = {
-      ...form,
-      user_id: user!.id,
-      sleep_hours: 0,
-      sensitive_fields: sensitiveFields,
-    }
-    let { error, data } = await supabase.from('drug_tracker_sessions').insert(payload).select().single()
-    if (error) {
-      const fallbackPayload = {
-        date_start: payload.date_start,
-        personal_reflection: payload.personal_reflection,
-        notes: payload.notes,
-        is_sensitive: payload.is_sensitive,
-        user_id: payload.user_id,
-        sleep_hours: payload.sleep_hours,
-        sensitive_fields: payload.sensitive_fields,
-      }
-      const fallback = await supabase.from('drug_tracker_sessions').insert(fallbackPayload).select().single()
-      error = fallback.error
-      data = fallback.data
-    }
-
-    if (error) { toast.error('Failed: ' + error.message); setSaving(false); return }
+    const res = await fetch('/api/tracker', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...form,
+        sensitive_fields: sensitiveFields,
+      }),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) { toast.error('Failed: ' + (data?.error ?? 'Unknown error')); setSaving(false); return }
     toast.success('Session started.')
     router.push(`/tracker/${data.id}`)
   }

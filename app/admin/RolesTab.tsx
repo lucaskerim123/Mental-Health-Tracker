@@ -7,9 +7,9 @@ import type { Action, Resource, Role } from '@/lib/supabase/types'
 import {
   cloneRolePermissions,
   normalizeRolePermissions,
+  ROLE_PERMISSION_EDITABLE_ROLES,
   ROLE_PERMISSION_ACTIONS,
   ROLE_PERMISSION_RESOURCES,
-  ROLE_PERMISSION_ROLES,
   type RolePermissionsMatrix,
 } from '@/lib/role-permissions'
 
@@ -78,7 +78,7 @@ export default function RolesTab({ initialRolePermissions }: Props) {
       <div className="border border-zinc-800 bg-zinc-950 p-5">
         <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500 mb-4">Role Defaults</p>
         <div className="flex flex-wrap gap-2">
-          {ROLE_PERMISSION_ROLES.map(role => (
+          {ROLE_PERMISSION_EDITABLE_ROLES.map(role => (
             <button
               key={role}
               type="button"

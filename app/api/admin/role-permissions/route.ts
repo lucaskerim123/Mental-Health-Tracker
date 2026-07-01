@@ -6,6 +6,7 @@ import {
   cloneRolePermissions,
   parseRolePermissions,
   normalizeRolePermissions,
+  ROLE_PERMISSION_EDITABLE_ROLES,
   ROLE_PERMISSION_ROLES,
   type RolePermissionsMatrix,
 } from '@/lib/role-permissions'
@@ -32,6 +33,9 @@ export async function POST(request: NextRequest) {
   const { role, permissions } = await request.json()
   if (!role || !permissions) return NextResponse.json({ error: 'role and permissions required' }, { status: 400 })
   if (!ROLE_PERMISSION_ROLES.includes(role as Role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+  if (!ROLE_PERMISSION_EDITABLE_ROLES.includes(role as Role)) {
+    return NextResponse.json({ error: 'Admin permissions cannot be edited' }, { status: 403 })
+  }
 
   const safeRole = role as Role
   const admin = createAdminClient()
@@ -52,6 +56,7 @@ export async function POST(request: NextRequest) {
     displayName: profile.display_name,
     action: 'update_config',
     metadata: { key: 'role_permissions', role: safeRole },
+    request,
   })
 
   return NextResponse.json({ role_permissions: next })

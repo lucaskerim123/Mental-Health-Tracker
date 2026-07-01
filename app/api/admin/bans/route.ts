@@ -20,6 +20,14 @@ export async function POST(request: NextRequest) {
   if (!type || !value) return NextResponse.json({ error: 'type and value required' }, { status: 400 })
 
   const admin = createAdminClient()
+  if (type === 'user') {
+    const { data: target, error: targetError } = await admin.from('users').select('role').eq('id', value).single()
+    if (targetError) return NextResponse.json({ error: targetError.message }, { status: 400 })
+    if (target?.role === 'admin') {
+      return NextResponse.json({ error: 'Admin accounts cannot be banned' }, { status: 403 })
+    }
+  }
+
   const { data, error } = await admin.from('bans').insert({
     type,
     value,
@@ -37,6 +45,7 @@ export async function POST(request: NextRequest) {
     resourceType: 'ban',
     resourceId: data.id,
     metadata: { type, value, reason },
+    request,
   })
 
   return NextResponse.json(data)

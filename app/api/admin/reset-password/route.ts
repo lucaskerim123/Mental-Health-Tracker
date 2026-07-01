@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activity'
+import { isAdminOwner } from '@/lib/admin-owner'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -20,6 +21,11 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient()
+  const { data: targetProfile } = await admin.from('users').select('role').eq('id', userId).single()
+  if (targetProfile?.role === 'admin' && !(await isAdminOwner(user.id))) {
+    return NextResponse.json({ error: 'Only the admin owner can reset another admin password' }, { status: 403 })
+  }
+
   const { data: targetUser, error: lookupError } = await admin.auth.admin.getUserById(userId)
   if (lookupError || !targetUser?.user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -35,6 +41,7 @@ export async function POST(req: NextRequest) {
     resourceType: 'user',
     resourceId: userId,
     metadata: { target_email: targetUser.user.email ?? null },
+    request: req,
   })
 
   return NextResponse.json({ ok: true })

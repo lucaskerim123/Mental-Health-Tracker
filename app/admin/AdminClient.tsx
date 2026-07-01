@@ -188,7 +188,7 @@ function BansTab({ bans: initialBans, users }: { bans: BanType[]; users: UserPro
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Type"><select value={type} onChange={e => { setType(e.target.value as 'user' | 'ip'); setValue('') }} className="admin-input"><option value="ip">IP Address</option><option value="user">User</option></select></FormField>
             <FormField label={type === 'ip' ? 'IP Address' : 'User'}>
-              {type === 'ip' ? <input type="text" value={value} onChange={e => setValue(e.target.value)} required placeholder="e.g. 1.2.3.4" className="admin-input" /> : <select value={value} onChange={e => setValue(e.target.value)} required className="admin-input"><option value="">Select user…</option>{users.map(u => <option key={u.id} value={u.id}>{u.display_name} ({u.role})</option>)}</select>}
+              {type === 'ip' ? <input type="text" value={value} onChange={e => setValue(e.target.value)} required placeholder="e.g. 1.2.3.4" className="admin-input" /> : <select value={value} onChange={e => setValue(e.target.value)} required className="admin-input"><option value="">Select user…</option>{users.filter(u => u.role !== 'admin').map(u => <option key={u.id} value={u.id}>{u.display_name} ({u.role})</option>)}</select>}
             </FormField>
             <FormField label="Reason (optional)"><input type="text" value={reason} onChange={e => setReason(e.target.value)} className="admin-input" /></FormField>
             <FormField label="Expires (optional)"><input type="datetime-local" value={expires} onChange={e => setExpires(e.target.value)} className="admin-input" /></FormField>
@@ -206,7 +206,13 @@ function BansTab({ bans: initialBans, users }: { bans: BanType[]; users: UserPro
 
 const ACTION_LABELS: Record<string, string> = {
   create_user: 'Created user',
+  delete_user: 'Deleted user',
+  update_user_profile: 'Updated user profile',
+  update_user_role: 'Changed user role',
   reset_password: 'Reset password',
+  create_incident: 'Created incident',
+  create_tracker_session: 'Created tracker session',
+  create_document: 'Uploaded document',
   create_ban: 'Banned',
   remove_ban: 'Unbanned',
   update_config: 'Updated config',
@@ -223,7 +229,7 @@ function ActivityTab({ logs }: { logs: ActivityLog[] }) {
     const q = search.toLowerCase()
     return (l.display_name ?? '').toLowerCase().includes(q) || l.action.toLowerCase().includes(q) || (l.ip_address ?? '').includes(q)
   })
-  return <div className="space-y-4"><div className="relative max-w-xs"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-700" /><input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Filter logs…" className="w-full bg-black border border-zinc-800 text-zinc-300 pl-8 pr-3 py-2 text-xs font-mono focus:outline-none focus:border-zinc-600 placeholder:text-zinc-700 transition-colors" /></div><div className="space-y-px">{filtered.length === 0 && <p className="text-sm text-zinc-700 font-mono py-8 text-center">No activity yet.</p>}{filtered.map(log => <div key={log.id} className="flex items-start gap-4 border border-zinc-800 bg-zinc-950 px-5 py-3"><div className="flex-1 min-w-0"><div className="flex items-center gap-2 flex-wrap"><span className="text-xs font-mono text-zinc-300">{log.display_name ?? <span className="text-zinc-600">system</span>}</span><span className="text-[10px] font-mono text-zinc-500">{ACTION_LABELS[log.action] ?? log.action}</span>{log.resource_type && <span className="text-[10px] font-mono text-zinc-700">{log.resource_type}</span>}</div>{log.metadata && <p className="text-[10px] font-mono text-zinc-700 mt-0.5 truncate">{Object.entries(log.metadata).map(([k, v]) => `${k}: ${String(v)}`).join(' · ')}</p>}{log.ip_address && <p className="text-[10px] font-mono text-zinc-700 mt-0.5">IP: {log.ip_address}</p>}</div><span className="text-[10px] font-mono text-zinc-600 shrink-0">{formatDateTime(log.created_at)}</span></div>)}</div></div>
+  return <div className="space-y-4"><div className="relative max-w-xs"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-700" /><input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Filter logs…" className="w-full bg-black border border-zinc-800 text-zinc-300 pl-8 pr-3 py-2 text-xs font-mono focus:outline-none focus:border-zinc-600 placeholder:text-zinc-700 transition-colors" /></div><div className="space-y-px">{filtered.length === 0 && <p className="text-sm text-zinc-700 font-mono py-8 text-center">No activity yet.</p>}{filtered.map(log => <div key={log.id} className="flex items-start gap-4 border border-zinc-800 bg-zinc-950 px-5 py-3"><div className="flex-1 min-w-0"><div className="flex items-center gap-2 flex-wrap"><span className="text-xs font-mono text-zinc-300">{log.display_name ?? <span className="text-zinc-600">system</span>}</span><span className="text-[10px] font-mono text-zinc-500">{ACTION_LABELS[log.action] ?? log.action}</span>{log.resource_type && <span className="text-[10px] font-mono text-zinc-700">{log.resource_type}</span>}</div>{log.ip_address && <p className="text-[10px] font-mono text-amber-700 mt-0.5">IP: {log.ip_address}</p>}{log.metadata && <p className="text-[10px] font-mono text-zinc-700 mt-0.5 break-words [overflow-wrap:anywhere]">{Object.entries(log.metadata).filter(([, v]) => v !== null && v !== '').map(([k, v]) => `${k}: ${String(v)}`).join(' · ')}</p>}</div><span className="text-[10px] font-mono text-zinc-600 shrink-0">{formatDateTime(log.created_at)}</span></div>)}</div></div>
 }
 
 function ConfigTab({ config: initialConfig }: { config: Record<string, string> }) {

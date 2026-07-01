@@ -28,18 +28,19 @@ export default function DocumentsClient({ documents: initialDocs, isAdmin, userI
     const { error: uploadErr } = await supabase.storage.from('documents').upload(path, file)
     if (uploadErr) { toast.error('Upload failed: ' + uploadErr.message); setUploading(false); return }
 
-    const { error: dbErr, data } = await supabase.from('documents').insert({
-      uploaded_by: userId,
-      filename: file.name,
-      storage_path: path,
-      mime_type: file.type,
-      is_sensitive: isSensitive,
-      allowed_user_ids: [],
-      attached_to_type: 'none',
-      attached_to_id: null,
-    }).select().single()
+    const res = await fetch('/api/documents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: file.name,
+        storage_path: path,
+        mime_type: file.type,
+        is_sensitive: isSensitive,
+      }),
+    })
+    const data = await res.json().catch(() => null)
 
-    if (dbErr) { toast.error('DB error: ' + dbErr.message) }
+    if (!res.ok) { toast.error('DB error: ' + (data?.error ?? 'Unknown error')) }
     else { setDocs(prev => [data, ...prev]); toast.success('Uploaded.') }
     setUploading(false)
     if (fileRef.current) fileRef.current.value = ''

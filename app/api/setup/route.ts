@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ensureAdminOwnerId } from '@/lib/admin-owner'
 
 export async function POST(req: NextRequest) {
   const admin = createAdminClient()
@@ -37,6 +38,8 @@ export async function POST(req: NextRequest) {
     await admin.auth.admin.deleteUser(uid)
     return NextResponse.json({ error: profileError.message || profileError.details || JSON.stringify(profileError) }, { status: 400 })
   }
+
+  await ensureAdminOwnerId(uid)
 
   return NextResponse.json({ success: true })
 }
