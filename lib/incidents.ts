@@ -9,11 +9,11 @@ import type {
 export const REDACTED = 'REDACTED'
 
 export const INCIDENT_FIELD_LABELS: Record<IncidentFieldKey, string> = {
-  brief_summary: 'Brief summary',
-  description: 'Incident details',
+  brief_summary: 'Front card summary',
+  description: 'Detailed Incident Details',
   notes: 'Notes',
-  personal_notes: 'Private notes',
-  professional_note: 'Note for counsellor and lawyer',
+  personal_notes: 'Private Notes',
+  professional_note: 'Note for counsellor and Lawyer',
   location: 'Location',
   people_involved: 'Who was involved',
   outcome: "What's outcome",
