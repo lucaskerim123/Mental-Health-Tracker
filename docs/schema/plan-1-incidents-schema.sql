@@ -1,17 +1,19 @@
--- Plan 1 incident schema update.
--- Review before applying. This preserves mental_health_incidents.id as the
--- internal UUID and adds locked human-readable incident numbers separately.
+-- Plan 1 incidents schema, rebuilt to match the current app state.
+-- This is a documentation/schema reference, not a migration to run blindly.
+
+begin;
 
 alter table public.mental_health_incidents
   add column if not exists incident_number bigint,
   add column if not exists location text,
   add column if not exists outcome text,
   add column if not exists professional_note text,
+  add column if not exists tracker_session_id uuid references public.drug_tracker_sessions(id) on delete set null,
   add column if not exists field_visibility jsonb not null default jsonb_build_object(
     'description', 'viewer+',
     'notes', 'viewer+',
-    'personal_notes', 'counsellor+',
-    'professional_note', 'counsellor+',
+    'personal_notes', 'admin only',
+    'professional_note', 'lawyer+',
     'location', 'viewer+',
     'people_involved', 'viewer+',
     'outcome', 'viewer+'
@@ -33,10 +35,7 @@ where incidents.id = numbered.id;
 
 select setval(
   'public.mental_health_incident_number_seq',
-  greatest(
-    coalesce((select max(incident_number) from public.mental_health_incidents), 0),
-    1
-  ),
+  greatest(coalesce((select max(incident_number) from public.mental_health_incidents), 0), 1),
   true
 );
 
@@ -51,8 +50,11 @@ create unique index if not exists mental_health_incidents_incident_number_key
   on public.mental_health_incidents (incident_number);
 
 alter table public.mental_health_incidents
+  drop constraint if exists mental_health_incidents_field_visibility_is_object;
+
+alter table public.mental_health_incidents
   add constraint mental_health_incidents_field_visibility_is_object
-  check (jsonb_typeof(field_visibility) = 'object');
+  check (jsonb_typeof(field_visibility) = 'object') not valid;
 
 create or replace function public.set_incident_number()
 returns trigger
@@ -98,3 +100,5 @@ execute function public.prevent_incident_number_update();
 
 revoke execute on function public.set_incident_number() from public;
 revoke execute on function public.prevent_incident_number_update() from public;
+
+commit;

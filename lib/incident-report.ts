@@ -47,14 +47,16 @@ export async function getIncidentReportData(incidentId: string, role: Role, user
   const { data: incident } = await supabase.from('mental_health_incidents').select('*').eq('id', incidentId).single()
   if (!incident) return null
 
-  const trackerSessionPromise = incident.tracker_session_id
-    ? supabase.from('drug_tracker_sessions').select('id, session_number, date_start, date_end').eq('id', incident.tracker_session_id).single()
-    : Promise.resolve({ data: null })
+  const { data: trackerSession } = incident.tracker_session_id
+    ? await supabase.from('drug_tracker_sessions').select('id, session_number, date_start, date_end').eq('id', incident.tracker_session_id).single()
+    : { data: null }
 
-  const [{ data: trackerSession }, { data: documents }] = await Promise.all([
-    trackerSessionPromise,
-    supabase.from('documents').select('*').eq('attached_to_type', 'incident').eq('attached_to_id', incidentId).order('created_at', { ascending: true }),
-  ])
+  const { data: documents } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('attached_to_type', 'incident')
+    .eq('attached_to_id', incidentId)
+    .order('created_at', { ascending: true })
 
   return {
     incident,

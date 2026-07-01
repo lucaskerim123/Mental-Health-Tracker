@@ -1,11 +1,8 @@
--- Plan 2 - Session Tracker local-only schema proposal.
--- Do not run against Supabase without explicit approval.
--- Goal: add Session # display IDs, structured visibility, and MCP-compatible log metadata
--- while preserving existing table names and Claude MCP behavior.
+-- Plan 2 session tracker schema, rebuilt to match the current app state.
+-- This is a documentation/schema reference, not a migration to run blindly.
 
 begin;
 
--- Session # display IDs.
 create sequence if not exists public.drug_tracker_session_number_seq;
 
 alter table public.drug_tracker_sessions
@@ -37,10 +34,7 @@ where s.id = numbered.id;
 
 select setval(
   'public.drug_tracker_session_number_seq',
-  greatest(
-    coalesce((select max(session_number) from public.drug_tracker_sessions), 0),
-    1
-  ),
+  greatest(coalesce((select max(session_number) from public.drug_tracker_sessions), 0), 1),
   true
 );
 
@@ -93,9 +87,8 @@ alter table public.drug_tracker_sessions
   add constraint drug_tracker_sessions_field_visibility_object
   check (jsonb_typeof(field_visibility) = 'object') not valid;
 
--- Extend existing tracker output table for MCP/system outputs.
 alter table public.tracker_entries
-  add column if not exists entry_type text not null default 'note',
+  add column if not exists entry_type text not null default 'entry',
   add column if not exists metadata jsonb not null default '{}'::jsonb,
   add column if not exists visibility text not null default 'admin only',
   add column if not exists incident_id uuid references public.mental_health_incidents(id) on delete set null;
@@ -114,19 +107,11 @@ create index if not exists tracker_entries_incident_idx
 create index if not exists tracker_entries_session_type_idx
   on public.tracker_entries (session_id, entry_type, created_at desc);
 
--- The current app queries session_notes/session_moods/session_events, but these tables
--- are not present in the current migration folder. Keep these blocks additive and
--- compatible with the table names already used by the app.
-
-create table if not exists public.session_moods (
-  id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references public.drug_tracker_sessions(id) on delete cascade,
-  mood text not null,
-  notes text,
-  source text not null default 'app',
-  occurred_at timestamptz not null default now(),
-  created_at timestamptz not null default now()
-);
+alter table public.session_moods
+  add column if not exists source text not null default 'app',
+  add column if not exists notes text,
+  add column if not exists occurred_at timestamptz not null default now(),
+  add column if not exists created_at timestamptz not null default now();
 
 alter table public.session_moods enable row level security;
 
@@ -144,19 +129,21 @@ create policy "session_moods_counsellor_read" on public.session_moods
 create index if not exists session_moods_session_idx
   on public.session_moods (session_id, occurred_at desc);
 
-create table if not exists public.session_notes (
-  id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references public.drug_tracker_sessions(id) on delete cascade,
-  content text not null,
-  source text not null default 'app',
-  entry_type text not null default 'note',
-  metadata jsonb not null default '{}'::jsonb,
-  visibility text not null default 'counsellor+',
-  occurred_at timestamptz not null default now(),
-  created_at timestamptz not null default now()
-);
+alter table public.session_notes
+  add column if not exists content text,
+  add column if not exists source text not null default 'app',
+  add column if not exists entry_type text not null default 'note',
+  add column if not exists metadata jsonb not null default '{}'::jsonb,
+  add column if not exists visibility text not null default 'counsellor+',
+  add column if not exists occurred_at timestamptz not null default now(),
+  add column if not exists created_at timestamptz not null default now();
 
-alter table public.session_notes enable row level security;
+update public.session_notes
+set content = coalesce(content, note)
+where content is null;
+
+alter table public.session_notes
+  alter column content set not null;
 
 alter table public.session_notes
   drop constraint if exists session_notes_visibility_check;
@@ -164,6 +151,31 @@ alter table public.session_notes
 alter table public.session_notes
   add constraint session_notes_visibility_check
   check (visibility in ('viewer+', 'counsellor+', 'lawyer+', 'admin only')) not valid;
+
+create or replace function public.sync_session_notes_columns()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.content := coalesce(nullif(new.content, ''), new.note, '');
+  new.note := coalesce(nullif(new.note, ''), new.content, '');
+  new.source := coalesce(nullif(new.source, ''), 'app');
+  new.entry_type := coalesce(nullif(new.entry_type, ''), 'note');
+  new.visibility := coalesce(nullif(new.visibility, ''), 'counsellor+');
+  new.metadata := coalesce(new.metadata, '{}'::jsonb);
+  new.occurred_at := coalesce(new.occurred_at, now());
+  new.created_at := coalesce(new.created_at, now());
+  return new;
+end;
+$$;
+
+drop trigger if exists sync_session_notes_columns on public.session_notes;
+create trigger sync_session_notes_columns
+  before insert or update on public.session_notes
+  for each row
+  execute function public.sync_session_notes_columns();
+
+alter table public.session_notes enable row level security;
 
 drop policy if exists "session_notes_admin_all" on public.session_notes;
 create policy "session_notes_admin_all" on public.session_notes
@@ -193,20 +205,22 @@ create index if not exists session_notes_session_idx
 create index if not exists session_notes_session_type_idx
   on public.session_notes (session_id, entry_type, occurred_at desc);
 
-create table if not exists public.session_events (
-  id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references public.drug_tracker_sessions(id) on delete cascade,
-  title text not null,
-  content text,
-  source text not null default 'app',
-  entry_type text not null default 'event',
-  metadata jsonb not null default '{}'::jsonb,
-  visibility text not null default 'counsellor+',
-  occurred_at timestamptz not null default now(),
-  created_at timestamptz not null default now()
-);
+alter table public.session_events
+  add column if not exists title text not null default 'Session event',
+  add column if not exists content text not null default '',
+  add column if not exists entry_type text not null default 'event',
+  add column if not exists metadata jsonb not null default '{}'::jsonb,
+  add column if not exists visibility text not null default 'counsellor+',
+  add column if not exists occurred_at timestamptz not null default now(),
+  add column if not exists created_at timestamptz not null default now();
 
-alter table public.session_events enable row level security;
+update public.session_events
+set
+  title = coalesce(nullif(title, ''), event_type, 'Session event'),
+  content = coalesce(nullif(content, ''), event_type, ''),
+  entry_type = coalesce(nullif(entry_type, ''), 'event'),
+  metadata = coalesce(metadata, '{}'::jsonb),
+  visibility = coalesce(nullif(visibility, ''), 'counsellor+');
 
 alter table public.session_events
   drop constraint if exists session_events_visibility_check;
@@ -214,6 +228,8 @@ alter table public.session_events
 alter table public.session_events
   add constraint session_events_visibility_check
   check (visibility in ('viewer+', 'counsellor+', 'lawyer+', 'admin only')) not valid;
+
+alter table public.session_events enable row level security;
 
 drop policy if exists "session_events_admin_all" on public.session_events;
 create policy "session_events_admin_all" on public.session_events
@@ -224,18 +240,7 @@ create policy "session_events_admin_all" on public.session_events
 drop policy if exists "session_events_counsellor_read" on public.session_events;
 create policy "session_events_counsellor_read" on public.session_events
   for select
-  using (
-    current_user_role() = 'counsellor'
-    and visibility in ('viewer+', 'counsellor+')
-  );
-
-drop policy if exists "session_events_viewer_read" on public.session_events;
-create policy "session_events_viewer_read" on public.session_events
-  for select
-  using (
-    current_user_role() = 'viewer'
-    and visibility = 'viewer+'
-  );
+  using (current_user_role() = 'counsellor');
 
 create index if not exists session_events_session_idx
   on public.session_events (session_id, occurred_at desc);
@@ -243,7 +248,6 @@ create index if not exists session_events_session_idx
 create index if not exists session_events_session_type_idx
   on public.session_events (session_id, entry_type, occurred_at desc);
 
--- Keep incident linking through the already planned/existing column.
 alter table public.mental_health_incidents
   add column if not exists tracker_session_id uuid references public.drug_tracker_sessions(id) on delete set null;
 
