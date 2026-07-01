@@ -88,6 +88,12 @@ export interface SleepLog {
   id: string
   session_id: string
   hours_added: number
+  sleep_start: string | null
+  sleep_end: string | null
+  source: string
+  entry_type: string
+  metadata: Record<string, unknown> | null
+  visibility: FieldVisibilityLevel
   logged_at: string
 }
 
@@ -98,6 +104,10 @@ export interface DrugUseLog {
   amount: number | null
   unit: string | null
   notes: string | null
+  source: string
+  entry_type: string
+  metadata: Record<string, unknown> | null
+  visibility: FieldVisibilityLevel
   logged_at: string
 }
 
@@ -153,6 +163,48 @@ export interface TrackerEntry {
   visibility?: FieldVisibilityLevel | null
   metadata?: Record<string, unknown> | null
   incident_id?: string | null
+  is_sensitive?: boolean
+  created_at: string
+}
+
+export interface SessionMoodEntry {
+  id: string
+  session_id: string
+  mood: string
+  notes: string | null
+  source: string
+  entry_type: string
+  metadata: Record<string, unknown> | null
+  visibility: FieldVisibilityLevel
+  occurred_at: string
+  created_at: string
+}
+
+export interface SessionNoteEntry {
+  id: string
+  session_id: string
+  note: string | null
+  content: string
+  source: string
+  entry_type: string
+  metadata: Record<string, unknown> | null
+  visibility: FieldVisibilityLevel
+  is_sensitive: boolean
+  occurred_at: string
+  created_at: string
+}
+
+export interface SessionEventEntry {
+  id: string
+  session_id: string
+  event_type: string
+  title: string
+  content: string
+  entry_type: string
+  metadata: Record<string, unknown> | null
+  visibility: FieldVisibilityLevel
+  related_incident_id: string | null
+  occurred_at: string
   created_at: string
 }
 
