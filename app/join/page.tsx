@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Lock, AlertTriangle, ChevronRight } from 'lucide-react'
 
+const ALLOWED_INVITE_ROLES = ['viewer', 'lawyer', 'counsellor']
+
 function JoinForm() {
   const searchParams = useSearchParams()
   const urlToken = searchParams.get('token')
@@ -36,6 +38,7 @@ function JoinForm() {
     if (error || !data) { setTokenError('Invalid invite code.'); setStep('error'); return }
     if (data.used_by) { setTokenError('This invite has already been used.'); setStep('error'); return }
     if (new Date(data.expires_at) < new Date()) { setTokenError('This invite has expired.'); setStep('error'); return }
+    if (!ALLOWED_INVITE_ROLES.includes(data.role_to_assign)) { setTokenError('This invite role is no longer allowed.'); setStep('error'); return }
 
     setToken(tok.trim())
     setInvite(data)
