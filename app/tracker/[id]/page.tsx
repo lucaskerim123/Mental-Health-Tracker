@@ -38,6 +38,10 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
   const profile = await getProfile()
   if (!profile) redirect('/login')
 
+  const { overrides, roleDefaults } = await getPermissionContext(profile.id)
+  if (!can(profile, overrides, 'tracker', 'view', roleDefaults)) redirect('/dashboard')
+  const canManageTracker = can(profile, overrides, 'tracker', 'edit', roleDefaults) || can(profile, overrides, 'tracker', 'delete', roleDefaults)
+
   const supabase = await createClient()
   const [
     { data: session },
@@ -70,23 +74,6 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
 
   if (!session) notFound()
 
-  const { overrides, roleDefaults } = await getPermissionContext(profile.id)
-  const canViewSensitive = can(profile, overrides, 'tracker', 'view_sensitive', roleDefaults)
-  const canManageTracker = can(profile, overrides, 'tracker', 'edit', roleDefaults) || can(profile, overrides, 'tracker', 'delete', roleDefaults)
-
-  const sensitiveFieldMask = !canViewSensitive
-    ? Object.fromEntries(
-        (session.sensitive_fields ?? []).map((f: string) => [f, null])
-      )
-    : {}
-
-  const safeSession = canViewSensitive ? session : {
-    ...session,
-    personal_reflection: null,
-    ...(session.is_sensitive ? { notes: null } : {}),
-    ...sensitiveFieldMask,
-  }
-
   const simpleSessionEvents = ((sessionEvents ?? []) as SessionEventRow[]).map(event => ({
     ...event,
     event_type: eventLabel(event),
@@ -102,7 +89,7 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
           </Link>
         </div>
         <TrackerDetail
-          session={safeSession}
+          session={session}
           sleepLog={sleepLog ?? []}
           drugUseLog={drugUseLog ?? []}
           linkedIncidents={linkedIncidents ?? []}
@@ -111,9 +98,9 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
           sessionEvents={simpleSessionEvents}
           sessionMoods={sessionMoods ?? []}
           sessionNotes={sessionNotes ?? []}
-          role={canViewSensitive ? 'owner' : profile.role}
+          role={profile.role}
           isAdmin={canManageTracker}
-          canViewSensitive={canViewSensitive}
+          canViewSensitive={can(profile, overrides, 'tracker', 'view_sensitive', roleDefaults)}
         />
       </main>
     </AppShell>
