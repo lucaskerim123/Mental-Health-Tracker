@@ -48,7 +48,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase">User</h1>
         </div>
         {redactOwnerAccount ? (
-          <OwnerAccountRedacted />
+          <OwnerAccountRedacted user={user} />
         ) : (
           <UserDetail
             user={user}
