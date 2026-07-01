@@ -1,29 +1,12 @@
+import FancyRedacted from '@/components/permissions/FancyRedacted'
 import type { UserProfile } from '@/lib/supabase/types'
-
-const REDACTION_MARK = 'REDACTED  I♡EVELYN'
-
-function Row({ label }: { label: string }) {
-  return (
-    <div className="relative overflow-hidden border border-zinc-800 bg-black/40 px-3 py-3 min-h-[58px]">
-      <span className="relative z-10 block max-w-[42%] text-[10px] font-mono text-zinc-700 uppercase tracking-[0.35em] leading-relaxed break-words [overflow-wrap:anywhere]">
-        {label}
-      </span>
-      <div className="absolute inset-y-2 left-[42%] right-3 overflow-hidden blur-[3px]">
-        <div className="h-full w-full border border-red-950/30 bg-red-950/10 opacity-80" />
-      </div>
-      <span className="absolute inset-y-0 left-1/2 z-10 flex -translate-x-1/2 items-center justify-center text-[10px] font-mono text-red-800 tracking-[0.26em] uppercase blur-[0.45px] whitespace-nowrap">
-        {REDACTION_MARK}
-      </span>
-    </div>
-  )
-}
 
 function Section({ title, labels }: { title: string; labels: string[] }) {
   return (
     <div className="border border-zinc-800 bg-zinc-950 p-5">
       <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500 mb-4">{title}</p>
       <div className="space-y-2">
-        {labels.map(label => <Row key={label} label={label} />)}
+        {labels.map(label => <FancyRedacted key={label} label={label} />)}
       </div>
     </div>
   )
