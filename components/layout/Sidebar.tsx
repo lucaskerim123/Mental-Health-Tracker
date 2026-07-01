@@ -69,7 +69,13 @@ export default function Sidebar({ role, displayName }: SidebarProps) {
     router.push('/login')
   }
 
-  const roleColor = role === 'admin' ? 'text-red-800' : role === 'counsellor' ? 'text-amber-800' : 'text-zinc-500'
+  const roleColor = role === 'admin'
+    ? 'text-red-800'
+    : role === 'lawyer'
+      ? 'text-blue-800'
+      : role === 'counsellor'
+        ? 'text-amber-800'
+        : 'text-zinc-500'
 
   return (
     <>
