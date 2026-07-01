@@ -22,11 +22,13 @@ export async function POST(request: NextRequest) {
   if (hash !== data.value) return NextResponse.json({ error: 'Incorrect PIN' }, { status: 401 })
 
   await admin.from('site_config')
-    .update({ value: 'false', updated_at: new Date().toISOString() })
-    .eq('key', 'lockdown_mode')
+    .upsert([
+      { key: 'lockdown_mode', value: 'false', updated_at: new Date().toISOString() },
+      { key: 'lockdown_pin_hash', value: null, updated_at: new Date().toISOString() },
+    ])
 
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? undefined
-  await logActivity({ action: 'lockdown_disable_pin', ipAddress: ip })
+  await logActivity({ action: 'lockdown_disable_pin', ipAddress: ip, metadata: { pin_reset: true } })
 
   return NextResponse.json({ ok: true })
 }
