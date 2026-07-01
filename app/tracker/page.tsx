@@ -16,7 +16,7 @@ export default async function TrackerPage() {
     .select('*')
     .order('date_start', { ascending: false })
 
-  const isAdmin = profile.role === 'admin'
+  const isAdmin = profile.role === 'admin' || profile.role === 'owner'
 
   return (
     <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
