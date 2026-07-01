@@ -1,6 +1,6 @@
 const HEART = '♡'
+const SIDE = 'I' + HEART + 'EVELYN'
 const WORD = 'RE' + 'DACT' + 'ED'
-export const FANCY_REDACTED_TEXT = 'I' + HEART + 'EVELYN' + '-' + WORD + '-' + 'I' + HEART + 'EVELYN'
 
 interface FancyRedactedProps {
   label?: string
@@ -18,8 +18,12 @@ export default function FancyRedacted({ label, className = '' }: FancyRedactedPr
       <div className="absolute inset-y-2 left-[42%] right-3 overflow-hidden blur-[3px]">
         <div className="h-full w-full border border-red-950/30 bg-red-950/10 opacity-80" />
       </div>
-      <span className="absolute inset-y-0 left-1/2 z-10 flex -translate-x-1/2 items-center justify-center text-[10px] font-mono text-red-800 tracking-[0.18em] uppercase blur-[1.2px] whitespace-nowrap">
-        {FANCY_REDACTED_TEXT}
+      <span className="absolute inset-y-0 left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-1 text-[10px] font-mono text-red-800 tracking-[0.18em] uppercase whitespace-nowrap">
+        <span className="blur-[1.2px]">{SIDE}</span>
+        <span>-</span>
+        <span>{WORD}</span>
+        <span>-</span>
+        <span className="blur-[1.2px]">{SIDE}</span>
       </span>
     </div>
   )
