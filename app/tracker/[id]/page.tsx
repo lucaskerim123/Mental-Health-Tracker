@@ -71,7 +71,7 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
   if (!session) notFound()
 
   const canViewSensitive = profile.role !== 'viewer'
-  const isAdmin = profile.role === 'admin'
+  const canManageTracker = profile.role === 'admin' || profile.role === 'owner'
 
   const sensitiveFieldMask = !canViewSensitive
     ? Object.fromEntries(
@@ -111,11 +111,10 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
           sessionMoods={sessionMoods ?? []}
           sessionNotes={sessionNotes ?? []}
           role={profile.role}
-          isAdmin={isAdmin}
+          isAdmin={canManageTracker}
           canViewSensitive={canViewSensitive}
         />
       </main>
     </AppShell>
   )
 }
-
