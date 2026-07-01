@@ -114,8 +114,7 @@ Session Tracker cleanup:
 - Do not show duplicate log/session event sections unless there is a clear reason.
 - MCP command outputs should go in the bottom log/output section.
 - Normal notes, moods, usage, and sleep entries should stay in their proper entry sections.
-- Remove `any_incidents` if it is still used anywhere.
-- Incident connection should use `tracker_session_id` and linked incident lists, not a free-text `any_incidents` field.
+- Incident connection should use `tracker_session_id` and linked incident lists, not a free-text incidents field.
 - Mood entries, notes, usage entries, private notes, counsellor notes, lawyer notes, and MCP outputs need per-entry or per-field visibility where possible.
 - Visibility options: viewer+ / counsellor+ / lawyer+ / admin only.
 - Inputs need to be better structured where useful, not just basic/free-text fields.

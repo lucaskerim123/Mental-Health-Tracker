@@ -129,7 +129,6 @@ export function renderTrackerReportHtml(report: NonNullable<Awaited<ReturnType<t
     ${kv('Personal reflection', visibleSessionText(role, session, 'private_notes', session.personal_reflection))}
     ${kv('Counsellor notes', visibleSessionText(role, session, 'counsellor_notes', session.counsellor_notes))}
     ${kv('Lawyer notes', visibleSessionText(role, session, 'lawyer_notes', session.lawyer_notes))}
-    ${kv('Any incidents field', session.any_incidents)}
   `)
 
   const sleepBlock = section('Sleep Log', sleepLog.length ? `

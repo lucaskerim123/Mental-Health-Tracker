@@ -11,7 +11,6 @@ export default function NewTrackerForm() {
   const today = new Date().toISOString().split('T')[0]
   const [form, setForm] = useState({
     date_start: today,
-    any_incidents: '',
     brief_notes: '',
     counsellor_notes: '',
     lawyer_notes: '',
@@ -51,7 +50,6 @@ export default function NewTrackerForm() {
     if (error) {
       const fallbackPayload = {
         date_start: payload.date_start,
-        any_incidents: payload.any_incidents,
         personal_reflection: payload.personal_reflection,
         notes: payload.notes,
         is_sensitive: payload.is_sensitive,
@@ -75,9 +73,6 @@ export default function NewTrackerForm() {
         <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Start Date</label>
         <input type="date" value={form.date_start} onChange={e => set('date_start', e.target.value)} className="vault-input" required />
       </div>
-      <LockableField label="Any Incidents" field="any_incidents" isSensitive={isSensitive} toggle={toggleSensitiveField}>
-        <textarea value={form.any_incidents} onChange={e => set('any_incidents', e.target.value)} rows={3} className="vault-input resize-none" />
-      </LockableField>
       <div className="space-y-1.5">
         <label className="text-[10px] tracking-widest text-zinc-500 uppercase font-mono">Brief Notes</label>
         <textarea value={form.brief_notes} onChange={e => set('brief_notes', e.target.value)} rows={3} className="vault-input resize-none" />

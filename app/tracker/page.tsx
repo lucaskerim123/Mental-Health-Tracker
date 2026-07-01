@@ -44,7 +44,6 @@ export default async function TrackerPage() {
                 </Link>
                 <div className="text-right shrink-0">
                   <p className="text-xs font-mono text-zinc-400 whitespace-nowrap">{s.sleep_hours}h sleep</p>
-                  {s.any_incidents && <p className="text-[10px] font-mono text-red-800 mt-0.5">Incidents</p>}
                   <Link href={`/tracker/${s.id}/report`} className="mt-2 inline-block border border-amber-900/60 px-2 py-1 text-[10px] font-mono uppercase tracking-widest text-amber-700 hover:border-amber-700">
                     Report
                   </Link>

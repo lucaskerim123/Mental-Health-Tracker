@@ -4,7 +4,7 @@ Log entries should only log stuff from MCP commands.
 Log entries / session events need to be lower toward the bottom.
 Log entries and session events are kind of the same thing, so combine or clean that up so it is not duplicated.
 Mood entries, notes, and other session entries need visibility controls: viewer / counsellor / lawyer / admin.
-Remove the any_incidents field.
+The any_incidents field has been retired.
 There is no proper way to connect incidents, so add a proper incident-linking method.
 Needs more privacy control.
 Needs better inputs, not just basic/free-text fields.

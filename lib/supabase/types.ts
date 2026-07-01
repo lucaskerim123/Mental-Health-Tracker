@@ -72,7 +72,6 @@ export interface DrugTrackerSession {
   date_start: string
   date_end: string | null
   sleep_hours: number
-  any_incidents: string | null
   brief_notes: string | null
   counsellor_notes: string | null
   lawyer_notes: string | null

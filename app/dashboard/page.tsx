@@ -95,7 +95,7 @@ export default async function DashboardPage() {
                         <span className="min-w-0 text-xs font-mono text-zinc-400 break-words [overflow-wrap:anywhere]">{sessionLabel(s)} - {formatDate(s.date_start)} {s.date_end ? `-> ${formatDate(s.date_end)}` : '-> ongoing'}</span>
                         <span className={`shrink-0 text-[10px] font-mono px-1.5 py-0.5 ${!s.date_end ? 'text-amber-700 bg-amber-950/30' : 'text-zinc-500 bg-zinc-800'}`}>DAY {daysUp(s.date_start, s.date_end)}</span>
                       </div>
-                      <p className="text-xs text-zinc-500 font-mono mt-1 break-words [overflow-wrap:anywhere]">{s.sleep_hours}h sleep · {s.any_incidents ? 'Incidents logged' : 'No incidents'}</p>
+                      <p className="text-xs text-zinc-500 font-mono mt-1 break-words [overflow-wrap:anywhere]">{s.sleep_hours}h sleep</p>
                     </div>
                   </Link>
                 ))}
