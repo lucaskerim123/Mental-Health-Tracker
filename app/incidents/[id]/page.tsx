@@ -11,6 +11,10 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
   const profile = await getProfile()
   if (!profile) redirect('/login')
 
+  const { overrides, roleDefaults } = await getPermissionContext(profile.id)
+  if (!can(profile, overrides, 'incidents', 'view', roleDefaults)) redirect('/dashboard')
+  const canManageIncidents = can(profile, overrides, 'incidents', 'edit', roleDefaults) || can(profile, overrides, 'incidents', 'delete', roleDefaults)
+
   const supabase = await createClient()
   const [{ data: incident }, { data: trackerSessions }, { data: documents }] = await Promise.all([
     supabase.from('mental_health_incidents').select('*').eq('id', id).single(),
@@ -19,10 +23,6 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
   ])
 
   if (!incident) notFound()
-
-  const { overrides, roleDefaults } = await getPermissionContext(profile.id)
-  const canViewSensitive = can(profile, overrides, 'incidents', 'view_sensitive', roleDefaults)
-  const canManageIncidents = can(profile, overrides, 'incidents', 'edit', roleDefaults) || can(profile, overrides, 'incidents', 'delete', roleDefaults)
 
   return (
     <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
@@ -34,7 +34,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
         </div>
         <IncidentDetail
           incident={incident as MentalHealthIncident}
-          role={canViewSensitive ? 'owner' : profile.role}
+          role={profile.role}
           isAdmin={canManageIncidents}
           trackerSessions={trackerSessions ?? []}
           documents={documents ?? []}
