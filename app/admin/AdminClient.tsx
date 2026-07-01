@@ -202,6 +202,7 @@ function BansTab({ bans: initialBans, users }: { bans: BanType[]; users: UserPro
 
 const ACTION_LABELS: Record<string, string> = {
   create_user: 'Created user',
+  reset_password: 'Reset password',
   create_ban: 'Banned',
   remove_ban: 'Unbanned',
   update_config: 'Updated config',

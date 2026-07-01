@@ -1,4 +1,4 @@
-import { redirect, notFound } from 'next/navigation'
+﻿import { redirect, notFound } from 'next/navigation'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -31,7 +31,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
     <AppShell role={profile.role} displayName={profile.display_name}>
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-8">
-          <Link href="/admin" className="text-zinc-600 hover:text-zinc-400 text-[11px] font-mono tracking-widest uppercase transition-colors">← Admin</Link>
+          <Link href="/admin" className="text-zinc-600 hover:text-zinc-400 text-[11px] font-mono tracking-widest uppercase transition-colors">Admin</Link>
           <span className="text-zinc-700">/</span>
           <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase">User</h1>
         </div>
@@ -40,3 +40,4 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
     </AppShell>
   )
 }
+

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import AppShell from '@/components/layout/AppShell'
-import TrackerDetailClean from './TrackerDetailClean'
+import TrackerDetail from './TrackerDetail'
 
 type SessionEventRow = {
   id: string
@@ -100,7 +100,7 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
             Back to tracker
           </Link>
         </div>
-        <TrackerDetailClean
+        <TrackerDetail
           session={safeSession}
           sleepLog={sleepLog ?? []}
           drugUseLog={drugUseLog ?? []}

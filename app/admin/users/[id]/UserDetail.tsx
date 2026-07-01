@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Trash2, Save, ChevronDown, ChevronRight, Lock, Unlock, AlertTriangle } from 'lucide-react'
+import { Trash2, Save, ChevronDown, ChevronRight, Lock, Unlock, AlertTriangle, KeyRound } from 'lucide-react'
 import type { UserProfile, Permission, Resource, Action, Role } from '@/lib/supabase/types'
 import { ROLE_DEFAULTS } from '@/lib/supabase/types'
 import { cn } from '@/lib/utils'
@@ -57,6 +57,9 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [toggling, setToggling] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [resettingPassword, setResettingPassword] = useState(false)
   const router = useRouter()
   const isMe = user.id === currentUserId
   const supabase = createClient()
@@ -83,6 +86,25 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
     if (!res.ok) { toast.error(data.error || 'Delete failed'); return }
     toast.success('User deleted.')
     router.push('/admin')
+  }
+
+  async function resetPassword() {
+    if (!newPassword.trim()) { toast.error('Enter a new password.'); return }
+    if (newPassword.length < 8) { toast.error('Password must be at least 8 characters.'); return }
+    if (newPassword !== confirmPassword) { toast.error('Passwords do not match.'); return }
+    if (!confirm(`Reset password for ${user.display_name}? This replaces the current password immediately.`)) return
+    setResettingPassword(true)
+    const res = await fetch('/api/admin/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id, password: newPassword }),
+    })
+    const data = await res.json()
+    setResettingPassword(false)
+    if (!res.ok) { toast.error(data.error || 'Password reset failed'); return }
+    setNewPassword('')
+    setConfirmPassword('')
+    toast.success('Password reset.')
   }
 
   async function setPermission(resource: Resource, action: Action, next: boolean | null) {
@@ -182,6 +204,27 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
               <Trash2 className="w-3 h-3" /> Delete Account
             </button>
           )}
+        </div>
+      </div>
+
+      <div className="border border-zinc-800 bg-zinc-950 p-5">
+        <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500 mb-4">Password Reset</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">New Password</label>
+            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={8} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-600 transition-colors" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Confirm Password</label>
+            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} minLength={8} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-600 transition-colors" />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 mt-4 flex-wrap">
+          <button onClick={resetPassword} disabled={resettingPassword || !newPassword || !confirmPassword} className="flex items-center gap-2 px-4 py-2 border border-amber-900/50 text-amber-700 hover:border-amber-700 text-[11px] font-mono tracking-widest uppercase transition-colors disabled:opacity-30">
+            <KeyRound className="w-3 h-3" />
+            {resettingPassword ? 'Resetting...' : 'Reset Password'}
+          </button>
+          <p className="text-[10px] font-mono text-zinc-700">Admins can replace the current password for this account.</p>
         </div>
       </div>
 
