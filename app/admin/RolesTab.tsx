@@ -17,10 +17,10 @@ import {
 
 interface Props {
   initialRolePermissions: RolePermissionsMatrix
-  canEditAdminRole: boolean
+  canEditAdminRole?: boolean
 }
 
-export default function RolesTab({ initialRolePermissions, canEditAdminRole }: Props) {
+export default function RolesTab({ initialRolePermissions, canEditAdminRole = false }: Props) {
   const baseDefaults = useMemo(() => normalizeRolePermissions(null), [])
   const [rolePermissions, setRolePermissions] = useState<RolePermissionsMatrix>(cloneRolePermissions(initialRolePermissions))
   const [selectedRole, setSelectedRole] = useState<Role>('viewer')
@@ -118,26 +118,22 @@ export default function RolesTab({ initialRolePermissions, canEditAdminRole }: P
             <div key={resource} className="border border-zinc-800 bg-black/40 p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div>
-                  <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">{RESOURCE_LABELS[resource]}</p>
-                  <p className="mt-1 text-[10px] font-mono text-zinc-700">{ROLE_PERMISSION_ACTIONS[resource].length} permission toggle{ROLE_PERMISSION_ACTIONS[resource].length !== 1 ? 's' : ''}</p>
+                  <p className="text-xs font-mono text-zinc-300 uppercase tracking-wider">{RESOURCE_LABELS[resource]}</p>
+                  <p className="text-[10px] font-mono text-zinc-700 mt-0.5">{current[resource]?.length ?? 0} granted</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => setAll(resource, true)} className="text-[9px] font-mono tracking-widest uppercase px-2 py-1 border border-green-900/30 text-green-800 hover:border-green-700 transition-colors">Grant all</button>
-                  <button type="button" onClick={() => setAll(resource, false)} className="text-[9px] font-mono tracking-widest uppercase px-2 py-1 border border-red-900/30 text-red-800 hover:border-red-700 transition-colors">Clear</button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setAll(resource, true)} className="text-[10px] font-mono text-zinc-600 hover:text-zinc-300 uppercase tracking-widest">All</button>
+                  <button type="button" onClick={() => setAll(resource, false)} className="text-[10px] font-mono text-zinc-600 hover:text-zinc-300 uppercase tracking-widest">None</button>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {ROLE_PERMISSION_ACTIONS[resource].map(action => {
-                  const active = current[resource]?.includes(action) ?? false
+                  const checked = current[resource]?.includes(action) ?? false
                   return (
-                    <button
-                      key={action}
-                      type="button"
-                      onClick={() => toggleAction(resource, action)}
-                      className={`px-3 py-1.5 text-[10px] font-mono tracking-widest uppercase border transition-colors ${active ? 'border-green-800 bg-green-950/30 text-green-700' : 'border-zinc-800 text-zinc-600 hover:border-zinc-700 hover:text-zinc-400'}`}
-                    >
-                      {ACTION_LABELS[action]}
-                    </button>
+                    <label key={action} className="flex items-center gap-3 border border-zinc-800 bg-zinc-950 px-3 py-2 cursor-pointer hover:border-zinc-700 transition-colors">
+                      <input type="checkbox" checked={checked} onChange={() => toggleAction(resource, action)} className="accent-red-800 w-4 h-4" />
+                      <span className="text-[11px] font-mono text-zinc-400">{ACTION_LABELS[action]}</span>
+                    </label>
                   )
                 })}
               </div>
