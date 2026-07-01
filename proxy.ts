@@ -2,11 +2,11 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const EXEMPT_PATHS = [
-  '/lockdown', '/unlock', '/banned',
+const LOCKDOWN_EXEMPT_PATHS = [
+  '/lockdown',
+  '/unlock',
+  '/banned',
   '/api/lockdown',
-  '/login', '/join', '/setup', '/api/setup',
-  '/mobile/login',
 ]
 
 function getClientIp(request: NextRequest): string {
@@ -38,7 +38,7 @@ export async function proxy(request: NextRequest) {
   )
 
   const { pathname } = request.nextUrl
-  const isExempt = EXEMPT_PATHS.some(p => pathname.startsWith(p))
+  const isLockdownExempt = LOCKDOWN_EXEMPT_PATHS.some(p => pathname.startsWith(p))
 
   // Service-role client for system checks (bypasses RLS)
   const adminClient = createClient(
@@ -50,9 +50,9 @@ export async function proxy(request: NextRequest) {
   const clientIp = getClientIp(request)
   const now = new Date().toISOString()
 
-  // Run lockdown + IP ban checks in parallel (skip lockdown check for exempt paths)
+  // Run lockdown + IP ban checks in parallel. Only the emergency unlock paths bypass lockdown.
   const [{ data: lockdownRow }, { data: ipBan }] = await Promise.all([
-    isExempt
+    isLockdownExempt
       ? Promise.resolve({ data: null })
       : adminClient.from('site_config').select('value').eq('key', 'lockdown_mode').single(),
     clientIp === 'unknown'
@@ -67,28 +67,24 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/banned', request.url))
   }
 
-  if (!isExempt && lockdownRow?.value === 'true') {
+  if (!isLockdownExempt && lockdownRow?.value === 'true') {
     return NextResponse.redirect(new URL('/lockdown', request.url))
   }
 
   // Auth check
   const { data: { user } } = await supabase.auth.getUser()
 
-  const publicPaths = ['/login', '/join', '/setup', '/api/setup', '/lockdown', '/unlock', '/banned', '/api/lockdown', '/mobile/login']
+  const publicPaths = ['/login', '/join', '/setup', '/api/setup', '/lockdown', '/unlock', '/banned', '/api/lockdown']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
 
   if (!user && !isPublic) {
-    const loginPage = pathname.startsWith('/mobile') ? '/mobile/login' : '/login'
     const next = encodeURIComponent(pathname)
-    return NextResponse.redirect(new URL(`${loginPage}?next=${next}`, request.url))
+    return NextResponse.redirect(new URL(`/login?next=${next}`, request.url))
   }
 
   if (user) {
     if (pathname === '/login') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-    if (pathname === '/mobile/login') {
-      return NextResponse.redirect(new URL('/mobile', request.url))
     }
 
     // User ban check

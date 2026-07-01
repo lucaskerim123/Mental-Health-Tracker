@@ -21,12 +21,12 @@ function generateToken(): string {
 function inviteMessage(url: string, token: string) {
   const siteUrl = window.location.origin
 
-   return `ACCESS DROP — PRIVATE ENTRY
+  return `ACCESS DROP - PRIVATE ENTRY
 
-The vault stirs… but it does not welcome the unworthy.
-What you seek is not behind the door you see — it waits beneath the one you overlook.
+The vault stirs... but it does not welcome the unworthy.
+What you seek is not behind the door you see - it waits beneath the one you overlook.
 
-Luke’s tracker is sealed beyond: ${siteUrl}
+Luke's tracker is sealed beyond: ${siteUrl}
 
 The first door is not opened by the path in front of you.
 Look for what the vault hides in plain sight.
@@ -122,11 +122,11 @@ export default function InvitesClient({ invites: initialInvites, adminId }: Prop
                   {used && <span className="text-[9px] font-mono text-zinc-600 tracking-widest uppercase">Used</span>}
                   {expired && !used && <span className="text-[9px] font-mono text-red-800 tracking-widest uppercase">Expired</span>}
                 </div>
-                <p className="text-[10px] font-mono text-zinc-600">Expires {formatDateTime(invite.expires_at)} · {invite.token.slice(0, 12)}…</p>
+                <p className="text-[10px] font-mono text-zinc-600">Expires {formatDateTime(invite.expires_at)} · {invite.token.slice(0, 12)}...</p>
               </div>
               <div className="flex items-center gap-2">
                 {!used && !expired && <button onClick={() => copyLink(invite.token)} className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors"><Copy className="w-3.5 h-3.5" /></button>}
-                <button onClick={() => deleteInvite(invite)} className="p-2 text-red-900 hover:text-red-700 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                <button onClick={() => deleteInvite(invite)} className="p-2 text-red-900 hover:text-red-700 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>}
               </div>
             </div>
           )

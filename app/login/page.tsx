@@ -20,7 +20,6 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search)
     const next = params.get('next')
     if (next && next.startsWith('/') && !next.startsWith('//')) return next
-    if (navigator.userAgent.includes('MentalHealthTrackerApp')) return '/mobile'
     return '/dashboard'
   }
 
@@ -31,7 +30,7 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
-      setError('ACCESS DENIED — BAD SEAL')
+      setError('ACCESS DENIED - BAD SEAL')
       setLoading(false)
       return
     }

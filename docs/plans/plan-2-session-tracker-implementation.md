@@ -266,7 +266,6 @@ Run before considering implementation complete:
 
 ```powershell
 npm run build
-python -m py_compile mcp\his-py\server.py
 ```
 
 If implementing the SQL as a migration later, also test against a local Supabase/Postgres instance before applying to production.
