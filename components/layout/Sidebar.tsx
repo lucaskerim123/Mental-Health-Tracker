@@ -4,9 +4,10 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Shield, LayoutDashboard, Activity, Pill, FileText, Users, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Activity, Pill, FileText, Users, LogOut, Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import AESTClock from '@/components/AESTClock'
+import SecurePortalLink from './SecurePortalLink'
 
 interface SidebarProps {
   role: string
@@ -81,10 +82,7 @@ export default function Sidebar({ role, displayName }: SidebarProps) {
     <>
       {/* Mobile header bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-12 bg-zinc-900 border-b border-zinc-700 flex items-center justify-between px-4">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Shield className="w-4 h-4 text-red-600" strokeWidth={1.5} />
-          <span className="text-[10px] tracking-[0.3em] uppercase font-mono text-zinc-300">Secure Portal</span>
-        </Link>
+        <SecurePortalLink isAdmin={role === 'admin'} mobile />
         <div className="flex items-center gap-3">
           <AESTClock />
           <button
@@ -111,10 +109,7 @@ export default function Sidebar({ role, displayName }: SidebarProps) {
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <div className="flex items-center justify-between px-4 h-12 border-b border-zinc-700 shrink-0">
-          <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
-            <Shield className="w-4 h-4 text-red-700" strokeWidth={1.5} />
-            <span className="text-[10px] tracking-[0.3em] uppercase font-mono text-zinc-400">Secure Portal</span>
-          </Link>
+          <div onClick={() => setMobileOpen(false)}><SecurePortalLink isAdmin={role === 'admin'} mobile /></div>
           <button onClick={() => setMobileOpen(false)} className="text-zinc-600 hover:text-zinc-400 p-1">
             <X className="w-4 h-4" />
           </button>
@@ -138,10 +133,7 @@ export default function Sidebar({ role, displayName }: SidebarProps) {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col fixed top-0 left-0 bottom-0 w-[220px] bg-zinc-900 border-r border-zinc-700 z-30">
         <div className="px-4 py-4 border-b border-zinc-700 shrink-0">
-          <Link href="/dashboard" className="flex items-center gap-2.5 mb-3">
-            <Shield className="w-4 h-4 text-red-600 shrink-0" strokeWidth={1.5} />
-            <span className="text-[10px] tracking-[0.3em] uppercase font-mono text-zinc-300">Secure Portal</span>
-          </Link>
+          <div className="mb-3"><SecurePortalLink isAdmin={role === 'admin'} /></div>
           <AESTClock />
         </div>
 

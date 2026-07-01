@@ -84,7 +84,7 @@ export default async function DashboardPage() {
                         <span className={`shrink-0 text-[10px] font-mono px-1.5 py-0.5 ${inc.severity >= 7 ? 'text-red-700 bg-red-950/30' : inc.severity >= 4 ? 'text-amber-700 bg-amber-950/30' : 'text-zinc-500 bg-zinc-800'}`}>SEV {inc.severity}</span>
                       </div>
                       <p className="text-xs text-zinc-500 font-mono mt-1 line-clamp-2 break-words [overflow-wrap:anywhere]">
-                        {visibleIncidentText(profile.role, inc, 'description', inc.description)}
+                        {visibleIncidentText(profile.role, inc, 'brief_summary', inc.brief_summary) ?? 'No summary recorded.'}
                       </p>
                     </div>
                   </Link>
