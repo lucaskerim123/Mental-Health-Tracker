@@ -156,7 +156,7 @@ export function renderTrackerReportHtml(report: NonNullable<Awaited<ReturnType<t
     </div>
   ` : empty('No visible note entries recorded.'))
 
-  const entriesBlock = section('Tracker Entries / MCP Outputs', entries.length ? `
+  const entriesBlock = section('Tracker Entries', entries.length ? `
     <div class="stack">
       ${entries.map((entry: AnyRow) => `<article class="card"><p>${esc(entry.content)}</p><small>${esc(entry.entry_type ?? 'entry')} · ${esc(entry.source ?? 'unknown')} · ${esc(formatDateTime(entry.created_at))}</small></article>`).join('')}
     </div>

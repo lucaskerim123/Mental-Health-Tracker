@@ -9,7 +9,7 @@ export const SESSION_FIELD_LABELS: Record<SessionFieldKey, string> = {
   counsellor_notes: 'Counsellor notes',
   lawyer_notes: 'Lawyer notes',
   private_notes: 'Private notes',
-  mcp_outputs: 'Log entries (outputs from mcp)',
+  mcp_outputs: 'Log entries',
 }
 
 export const DEFAULT_SESSION_FIELD_VISIBILITY: Record<SessionFieldKey, FieldVisibilityLevel> = {
