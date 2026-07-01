@@ -16,7 +16,7 @@ Upgrade Incidents into structured incident records with:
 - Do not replace `mental_health_incidents.id`.
 - Do not rename existing tables or columns used by the app or MCP.
 - Do not let app users or MCP edit `incident_number`.
-- Do not leak restricted values in lists, previews, mobile pages, MCP outputs, or linked-record labels.
+- Do not leak restricted values in lists, previews, MCP outputs, or linked-record labels.
 - Do not apply database changes until the SQL is reviewed.
 
 ## Schema
@@ -179,22 +179,6 @@ Do not show:
 - Restricted private notes.
 - Restricted details in previews.
 
-## Mobile Incident Pages
-
-Update:
-
-- `app/mobile/incident/QuickIncidentForm.tsx`
-- `app/mobile/incidents/page.tsx`
-- `app/mobile/incidents/[id]/page.tsx`
-
-Minimum mobile support:
-
-- Create incidents with new optional fields where UI has room.
-- Include safe default `field_visibility`.
-- Show `Incident #`.
-- Redact restricted values.
-- Do not leak `personal_notes`, `professional_note`, notes, location, outcome, or details.
-
 ## Dashboard / Linked Views
 
 Check and update:
@@ -209,27 +193,6 @@ Requirements:
 - Prefer `Incident #` over UUID in user-facing labels.
 - Linked incident sections show `Incident #`.
 - Restricted incident preview values are `REDACTED`.
-
-## MCP Updates
-
-Update only after schema/app shape is finalized:
-
-- `mcp/his-py/server.py`
-
-Required MCP changes:
-
-- `createincident` accepts:
-  - `location`
-  - `people_involved` or `people`
-  - `professional_note`
-  - `outcome`
-  - `field_visibility`
-- Insert must not include `incident_number`.
-- Output should say `Incident #N created`.
-- MCP can use UUID internally.
-- MCP must not edit incident numbers.
-- MCP export/list outputs must respect field visibility.
-- MCP should prefer `Incident #N` in user-facing text.
 
 ## Activity Logging
 
@@ -256,15 +219,12 @@ Manual checks:
 - Incident list does not leak restricted preview text.
 - Detail page shows `Incident #`.
 - Edit form cannot change `incident_number`.
-- Mobile detail does not leak restricted fields.
-- MCP create incident still works after MCP update.
-
 Database checks after applying SQL:
 
 - Existing incidents have sequential `incident_number`.
 - New incidents get a number.
 - Updating `incident_number` fails.
-- Inserts from app/MCP succeed without specifying `incident_number`.
+- Inserts from the app succeed without specifying `incident_number`.
 
 ## Implementation Order
 
@@ -277,8 +237,7 @@ Database checks after applying SQL:
 7. Update incident list page.
 8. Update mobile incident pages.
 9. Update dashboard and linked incident displays.
-10. Update MCP `createincident` and incident outputs.
-11. Run build and manual checks.
-12. Commit on `website-work`.
-13. Push to `origin/website-work`.
-14. Open PR only after approval.
+10. Run build and manual checks.
+11. Commit on `website-work`.
+12. Push to `origin/website-work`.
+13. Open PR only after approval.

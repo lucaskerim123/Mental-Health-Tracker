@@ -19,7 +19,6 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search)
     const next = params.get('next')
     if (next && next.startsWith('/') && !next.startsWith('//')) return next
-    if (navigator.userAgent.includes('MentalHealthTrackerApp')) return '/mobile'
     return '/dashboard'
   }
 

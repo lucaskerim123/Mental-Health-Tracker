@@ -74,21 +74,17 @@ export async function proxy(request: NextRequest) {
   // Auth check
   const { data: { user } } = await supabase.auth.getUser()
 
-  const publicPaths = ['/login', '/join', '/setup', '/api/setup', '/lockdown', '/unlock', '/banned', '/api/lockdown', '/mobile/login']
+  const publicPaths = ['/login', '/join', '/setup', '/api/setup', '/lockdown', '/unlock', '/banned', '/api/lockdown']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
 
   if (!user && !isPublic) {
-    const loginPage = pathname.startsWith('/mobile') ? '/mobile/login' : '/login'
     const next = encodeURIComponent(pathname)
-    return NextResponse.redirect(new URL(`${loginPage}?next=${next}`, request.url))
+    return NextResponse.redirect(new URL(`/login?next=${next}`, request.url))
   }
 
   if (user) {
     if (pathname === '/login') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-    if (pathname === '/mobile/login') {
-      return NextResponse.redirect(new URL('/mobile', request.url))
     }
 
     // User ban check

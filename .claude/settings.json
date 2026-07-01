@@ -1,14 +1,5 @@
 {
-  "mcpServers": {
-    "tracker": {
-      "command": "python3",
-      "args": ["mcp/his-py/server.py"]
-    },
-    "his": {
-      "command": "python3",
-      "args": ["mcp/his-py/server.py"]
-    }
-  },
+  "mcpServers": {},
   "permissions": {
     "defaultMode": "bypassPermissions"
   }

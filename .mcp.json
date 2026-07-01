@@ -1,12 +1,3 @@
 {
-  "mcpServers": {
-    "tracker": {
-      "command": "python",
-      "args": ["mcp/his-py/server.py"]
-    },
-    "his": {
-      "command": "python",
-      "args": ["mcp/his-py/server.py"]
-    }
-  }
+  "mcpServers": {}
 }
