@@ -17,14 +17,14 @@ export default async function IncidentsPage() {
     .select('*')
     .order('occurred_at', { ascending: false })
 
-  const isAdmin = profile.role === 'admin'
+  const canManageIncidents = profile.role === 'admin' || profile.role === 'owner'
 
   return (
     <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8 gap-3">
           <h1 className="min-w-0 text-lg font-mono tracking-widest text-zinc-300 uppercase break-words [overflow-wrap:anywhere]">Mental Health Incidents</h1>
-          {isAdmin && (
+          {canManageIncidents && (
             <Link href="/incidents/new" className="shrink-0 border border-red-900/60 text-red-800 hover:bg-red-950/30 px-4 py-2 text-[11px] font-mono tracking-widest uppercase transition-colors">
               + New Entry
             </Link>
