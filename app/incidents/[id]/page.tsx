@@ -31,7 +31,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
         <IncidentDetail
           incident={incident as MentalHealthIncident}
           role={profile.role}
-          isAdmin={profile.role === 'admin'}
+          isAdmin={profile.role === 'admin' || profile.role === 'owner'}
           trackerSessions={trackerSessions ?? []}
           documents={documents ?? []}
           userId={profile.id}
@@ -40,4 +40,3 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
     </AppShell>
   )
 }
-
