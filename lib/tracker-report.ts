@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { daysUp, formatDate, formatDateTime } from '@/lib/utils'
 import { incidentLabel, visibleIncidentText } from '@/lib/incidents'
 import { canViewVisibilityLevel, sessionLabel, visibleSessionText } from '@/lib/sessions'
-import type { Role } from '@/lib/supabase/types'
+import type { MentalHealthIncident, Role } from '@/lib/supabase/types'
 
 type AnyRow = Record<string, any>
 
@@ -50,6 +50,10 @@ function eventLabel(event: AnyRow) {
   if (raw.includes('summary') || raw.includes('summarise') || raw.includes('summarize')) return 'Summary command'
   if (raw.includes('status') || raw.includes('check')) return 'Status check'
   return original || 'Session event'
+}
+
+function asIncident(row: AnyRow): MentalHealthIncident {
+  return row as MentalHealthIncident
 }
 
 export async function getTrackerReportData(sessionId: string, role: Role) {
@@ -166,7 +170,7 @@ export function renderTrackerReportHtml(report: NonNullable<Awaited<ReturnType<t
 
   const incidentsBlock = section('Connected Incidents', linkedIncidents.length ? `
     <div class="stack">
-      ${linkedIncidents.map((incident: AnyRow) => `<article class="card incident"><h3>${esc(incidentLabel(incident))}</h3><div class="grid small">${kv('Occurred', formatDateTime(incident.occurred_at))}${kv('Severity', incident.severity)}${kv('Police called', incident.police_called)}${kv('Ambulance called', incident.ambulance_called)}${kv('Arrested', incident.was_arrested)}${kv('Sectioned', incident.was_sectioned)}</div><p>${esc(visibleIncidentText(role, incident, 'description', incident.description))}</p></article>`).join('')}
+      ${linkedIncidents.map((incident: AnyRow) => `<article class="card incident"><h3>${esc(incidentLabel(asIncident(incident)))}</h3><div class="grid small">${kv('Occurred', formatDateTime(incident.occurred_at))}${kv('Severity', incident.severity)}${kv('Police called', incident.police_called)}${kv('Ambulance called', incident.ambulance_called)}${kv('Arrested', incident.was_arrested)}${kv('Sectioned', incident.was_sectioned)}</div><p>${esc(visibleIncidentText(role, asIncident(incident), 'description', incident.description))}</p></article>`).join('')}
     </div>
   ` : empty('No incidents linked to this session.'))
 
