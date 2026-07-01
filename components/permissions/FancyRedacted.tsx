@@ -11,20 +11,22 @@ export default function FancyRedacted({ label, className = '' }: FancyRedactedPr
   return (
     <div className={`relative overflow-hidden border border-zinc-800 bg-black/40 px-3 py-3 min-h-[58px] ${className}`}>
       {label && (
-        <span className="relative z-10 block max-w-[42%] text-[10px] font-mono text-zinc-700 uppercase tracking-[0.35em] leading-relaxed break-words [overflow-wrap:anywhere]">
+        <span className="relative z-10 block max-w-[36%] text-[10px] font-mono text-zinc-700 uppercase tracking-[0.32em] leading-relaxed break-words [overflow-wrap:anywhere]">
           {label}
         </span>
       )}
-      <div className="absolute inset-y-2 left-[42%] right-3 overflow-hidden blur-[3px]">
-        <div className="h-full w-full border border-red-950/30 bg-red-950/10 opacity-80" />
+      <div className="absolute inset-y-2 left-[40%] right-3 overflow-hidden">
+        <div className="h-full w-full border border-red-950/30 bg-red-950/10 opacity-80 blur-[3px]" />
       </div>
-      <span className="absolute inset-y-0 left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-1 text-[10px] font-mono text-red-800 tracking-[0.18em] uppercase whitespace-nowrap">
-        <span className="blur-[1.2px]">{SIDE}</span>
-        <span>-</span>
-        <span className="font-bold text-red-700">{WORD}</span>
-        <span>-</span>
-        <span className="blur-[1.2px]">{SIDE}</span>
-      </span>
+      <div className="absolute inset-y-0 left-[40%] right-3 z-10 flex items-center justify-center overflow-hidden">
+        <div className="flex w-full items-center justify-center gap-2 whitespace-nowrap text-[10px] font-mono uppercase tracking-[0.16em] text-red-900/70">
+          <span className="max-w-[30%] overflow-hidden text-ellipsis blur-[1.4px]">{SIDE}</span>
+          <span className="text-red-900/50">-</span>
+          <span className="shrink-0 border border-red-900/40 bg-red-950/20 px-5 py-2 font-bold tracking-[0.35em] text-red-700 blur-0">{WORD}</span>
+          <span className="text-red-900/50">-</span>
+          <span className="max-w-[30%] overflow-hidden text-ellipsis blur-[1.4px]">{SIDE}</span>
+        </div>
+      </div>
     </div>
   )
 }
