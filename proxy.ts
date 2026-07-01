@@ -67,10 +67,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/banned', request.url))
   }
 
-  if (!isLockdownExempt && lockdownRow?.value === 'true') {
-    return NextResponse.redirect(new URL('/lockdown', request.url))
-  }
-
   // Auth check
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = user
@@ -104,13 +100,13 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL('/lockdown', request.url))
     }
 
-    if (isAdmin && pathname === '/lockdown') {
-      return supabaseResponse
-    }
-
     if (pathname === '/login') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
+  }
+
+  if (!user && !isLockdownExempt && lockdownRow?.value === 'true') {
+    return NextResponse.redirect(new URL('/lockdown', request.url))
   }
 
   return supabaseResponse
