@@ -27,8 +27,8 @@ export async function PATCH(req: NextRequest) {
   const roleChanging = target.role !== role
   const adminRoleChange = target.role === 'admin' || role === 'admin' || target.role === 'owner' || role === 'owner'
 
-  if (targetIsOwner && user.id !== target.id) {
-    return NextResponse.json({ error: 'The admin owner account cannot be modified by another user' }, { status: 403 })
+  if (targetIsOwner) {
+    return NextResponse.json({ error: 'The owner account cannot be modified' }, { status: 403 })
   }
 
   if (adminRoleChange && !currentUserIsOwner) {

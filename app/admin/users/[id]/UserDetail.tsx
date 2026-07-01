@@ -57,10 +57,12 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
   const router = useRouter()
   const isMe = user.id === currentUserId
   const canChangeAdminRole = viewerIsOwner
-  const canEditTarget = !targetIsOwner || isMe
-  const canEditDisplayName = canEditTarget && !isMe
-  const canDeleteTarget = !isMe && (!targetIsOwner || viewerIsOwner)
-  const canResetPassword = !targetIsOwner || viewerIsOwner
+  const ownerLocked = targetIsOwner
+  const canEditTarget = !ownerLocked && !isMe
+  const canEditDisplayName = canEditTarget
+  const canDeleteTarget = !isMe && !ownerLocked
+  const canResetPassword = !ownerLocked
+  const canEditPermissions = !ownerLocked && !isMe
   const supabase = createClient()
 
   async function saveProfile() {
@@ -182,7 +184,7 @@ const total = totalOverrides(permMap)
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Role</label>
-            <select value={role} onChange={e => { setRole(e.target.value as Role); setRoleChanged(true) }} disabled={isMe || (user.role === 'admin' && !canChangeAdminRole) || (role === 'admin' && !canChangeAdminRole) || targetIsOwner} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none disabled:opacity-40">
+            <select value={role} onChange={e => { setRole(e.target.value as Role); setRoleChanged(true) }} disabled={ownerLocked || isMe || (user.role === 'admin' && !canChangeAdminRole) || (role === 'admin' && !canChangeAdminRole)} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none disabled:opacity-40">
               <option value="viewer">viewer</option>
               <option value="lawyer">lawyer</option>
               <option value="counsellor">counsellor</option>
@@ -198,7 +200,7 @@ const total = totalOverrides(permMap)
         {targetIsOwner && (
           <div className="flex items-start gap-2 border border-red-900/40 bg-red-950/10 px-3 py-2 mb-4">
             <AlertTriangle className="w-3 h-3 text-red-700 mt-0.5 shrink-0" />
-            <p className="text-[10px] font-mono text-red-700/80">This is the owner account. Other users cannot change or remove it.</p>
+            <p className="text-[10px] font-mono text-red-700/80">This is the owner account. It is locked from admin edits, password resets, and per-user permission changes.</p>
           </div>
         )}
         {roleChanged && (
@@ -208,7 +210,7 @@ const total = totalOverrides(permMap)
           </div>
         )}
         <div className="flex items-center justify-between">
-          <button onClick={saveProfile} disabled={!profileChanged || saving || isMe || !canEditTarget} className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-zinc-500 text-[11px] font-mono tracking-widest uppercase transition-colors disabled:opacity-30">
+          <button onClick={saveProfile} disabled={!profileChanged || saving || !canEditTarget} className="flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 hover:border-zinc-500 text-[11px] font-mono tracking-widest uppercase transition-colors disabled:opacity-30">
             <Save className="w-3 h-3" />
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
@@ -225,11 +227,11 @@ const total = totalOverrides(permMap)
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">New Password</label>
-            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={8} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-600 transition-colors" />
+            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={8} disabled={!canResetPassword} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-600 transition-colors disabled:opacity-40" />
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Confirm Password</label>
-            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} minLength={8} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-600 transition-colors" />
+            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} minLength={8} disabled={!canResetPassword} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-zinc-600 transition-colors disabled:opacity-40" />
           </div>
         </div>
         <div className="flex items-center gap-3 mt-4 flex-wrap">
@@ -237,7 +239,7 @@ const total = totalOverrides(permMap)
             <KeyRound className="w-3 h-3" />
             {resettingPassword ? 'Resetting...' : 'Reset Password'}
           </button>
-          <p className="text-[10px] font-mono text-zinc-700">Admins can replace the current password for this account.</p>
+          <p className="text-[10px] font-mono text-zinc-700">{ownerLocked ? 'Owner account password resets are disabled here.' : 'Admins can replace the current password for this account.'}</p>
         </div>
       </div>
 
@@ -272,6 +274,11 @@ const total = totalOverrides(permMap)
           <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500">Permissions</p>
           {total > 0 && <span className="text-[9px] font-mono text-zinc-600 tracking-widest">{total} override{total !== 1 ? 's' : ''} active</span>}
         </div>
+        {ownerLocked && (
+          <div className="border-b border-zinc-800 px-5 py-3">
+            <p className="text-[10px] font-mono text-red-700/80">Per-user permission overrides are disabled for the owner account.</p>
+          </div>
+        )}
         <div className="space-y-3 p-3">
           {permissionGroups.map(group => (
             <div key={group.key} className="border border-zinc-800/60">
@@ -293,7 +300,7 @@ const total = totalOverrides(permMap)
                             <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">{resource.replace(/_/g, ' ')}</span>
                             {count > 0 && <span className="text-[9px] font-mono bg-zinc-800 text-zinc-500 px-1.5 py-0.5 tracking-wider">{count} override{count !== 1 ? 's' : ''}</span>}
                           </button>
-                          {!isMe && (
+                          {canEditPermissions && (
                             <div className="flex items-center gap-1 shrink-0">
                               <button type="button" onClick={() => resetResource(resource)} className="text-[9px] font-mono text-zinc-600 hover:text-zinc-400 tracking-widest uppercase px-2 py-1 border border-zinc-800 hover:border-zinc-600 transition-colors">Reset</button>
                               <button type="button" onClick={() => setResourceAll(resource, true)} className="text-[9px] font-mono text-green-900 hover:text-green-700 tracking-widest uppercase px-2 py-1 border border-green-900/30 hover:border-green-800 transition-colors">Grant All</button>
@@ -316,7 +323,7 @@ const total = totalOverrides(permMap)
                                     <span className="text-[11px] font-mono text-zinc-500 tracking-wide">{action.replace(/_/g, ' ')}</span>
                                     {isOverride && <span className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 bg-zinc-800/60 text-zinc-600">override</span>}
                                   </div>
-                                  {isMe ? (
+                                  {!canEditPermissions ? (
                                     <span className="text-[10px] font-mono text-green-800">{effective ? 'granted' : 'denied'}</span>
                                   ) : (
                                     <button

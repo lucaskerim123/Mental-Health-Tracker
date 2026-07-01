@@ -22,6 +22,9 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient()
   const { data: targetProfile } = await admin.from('users').select('role').eq('id', userId).single()
+  if (targetProfile?.role === 'owner') {
+    return NextResponse.json({ error: 'The owner account password cannot be reset here' }, { status: 403 })
+  }
   if ((targetProfile?.role === 'admin' || targetProfile?.role === 'owner') && !(await isAdminOwner(user.id))) {
     return NextResponse.json({ error: 'Only the owner can reset another admin or owner password' }, { status: 403 })
   }
