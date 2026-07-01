@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getProfile } from '@/lib/auth'
+import { can, getPermissionContext, getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import AppShell from '@/components/layout/AppShell'
 import Link from 'next/link'
@@ -11,13 +11,18 @@ export default async function IncidentsPage() {
   const profile = await getProfile()
   if (!profile) redirect('/login')
 
+  const { overrides, roleDefaults } = await getPermissionContext(profile.id)
+  if (!can(profile, overrides, 'incidents', 'view', roleDefaults)) redirect('/dashboard')
+
+  const canViewSensitive = can(profile, overrides, 'incidents', 'view_sensitive', roleDefaults)
+  const canManageIncidents = can(profile, overrides, 'incidents', 'create', roleDefaults)
+  const incidentViewRole = canViewSensitive ? 'owner' : profile.role
+
   const supabase = await createClient()
   const { data: incidents } = await supabase
     .from('mental_health_incidents')
     .select('*')
     .order('occurred_at', { ascending: false })
-
-  const canManageIncidents = profile.role === 'admin' || profile.role === 'owner'
 
   return (
     <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
@@ -32,7 +37,7 @@ export default async function IncidentsPage() {
         </div>
         <div className="space-y-2">
           {(incidents as MentalHealthIncident[] | null)?.map(inc => {
-            const summary = visibleIncidentText(profile.role, inc, 'brief_summary', inc.brief_summary) ?? 'No summary recorded.'
+            const summary = visibleIncidentText(incidentViewRole, inc, 'brief_summary', inc.brief_summary) ?? 'No summary recorded.'
             return (
               <Link key={inc.id} href={`/incidents/${inc.id}`} className="block min-w-0 max-w-full">
                 <div className="min-w-0 max-w-full border border-zinc-800 hover:border-zinc-700 bg-zinc-950 px-4 py-3.5 flex items-start justify-between gap-3 transition-colors overflow-hidden">
