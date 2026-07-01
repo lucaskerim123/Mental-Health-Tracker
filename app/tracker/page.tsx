@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getProfile } from '@/lib/auth'
+import { can, getPermissionContext, getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import AppShell from '@/components/layout/AppShell'
 import Link from 'next/link'
@@ -10,20 +10,23 @@ export default async function TrackerPage() {
   const profile = await getProfile()
   if (!profile) redirect('/login')
 
+  const { overrides, roleDefaults } = await getPermissionContext(profile.id)
+  if (!can(profile, overrides, 'tracker', 'view', roleDefaults)) redirect('/dashboard')
+
   const supabase = await createClient()
   const { data: sessions } = await supabase
     .from('drug_tracker_sessions')
     .select('*')
     .order('date_start', { ascending: false })
 
-  const isAdmin = profile.role === 'admin' || profile.role === 'owner'
+  const canCreateTracker = can(profile, overrides, 'tracker', 'create', roleDefaults)
 
   return (
     <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
       <main className="max-w-4xl mx-auto px-4 py-8 min-w-0 overflow-hidden">
         <div className="flex items-center justify-between gap-3 mb-8 min-w-0">
           <h1 className="min-w-0 text-lg font-mono tracking-widest text-zinc-300 uppercase break-words [overflow-wrap:anywhere]">Session Tracker</h1>
-          {isAdmin && (
+          {canCreateTracker && (
             <Link href="/tracker/new" className="shrink-0 border border-amber-900/60 text-amber-800 hover:bg-amber-950/30 px-4 py-2 text-[11px] font-mono tracking-widest uppercase transition-colors">
               + New Session
             </Link>
