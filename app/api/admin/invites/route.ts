@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activity'
-import { isAdminOwner } from '@/lib/admin-owner'
 import type { Role } from '@/lib/supabase/types'
+
+const INVITABLE_ROLES: Role[] = ['viewer', 'lawyer', 'counsellor']
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -19,8 +20,8 @@ export async function POST(req: NextRequest) {
   if (!token || !role || !expires_at) {
     return NextResponse.json({ error: 'Token, role and expiry are required' }, { status: 400 })
   }
-  if ((role === 'admin' || role === 'owner') && !(await isAdminOwner(user.id))) {
-    return NextResponse.json({ error: 'Only the owner can invite admin or owner roles' }, { status: 403 })
+  if (!INVITABLE_ROLES.includes(role)) {
+    return NextResponse.json({ error: 'Invites can only assign viewer, lawyer or counsellor roles' }, { status: 403 })
   }
 
   const admin = createAdminClient()
@@ -62,9 +63,6 @@ export async function DELETE(req: NextRequest) {
   const admin = createAdminClient()
   const { data: invite, error: lookupError } = await admin.from('invites').select('id, role_to_assign').eq('id', inviteId).single()
   if (lookupError || !invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
-  if ((invite.role_to_assign === 'admin' || invite.role_to_assign === 'owner') && !(await isAdminOwner(user.id))) {
-    return NextResponse.json({ error: 'Only the owner can revoke admin or owner invites' }, { status: 403 })
-  }
 
   const { error } = await admin.from('invites').delete().eq('id', inviteId)
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
