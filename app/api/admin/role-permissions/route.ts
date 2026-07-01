@@ -10,6 +10,7 @@ import {
   ROLE_PERMISSION_ROLES,
   type RolePermissionsMatrix,
 } from '@/lib/role-permissions'
+import { isAdminOwner } from '@/lib/admin-owner'
 import type { Role } from '@/lib/supabase/types'
 
 async function loadRolePermissions(admin: ReturnType<typeof createAdminClient>): Promise<RolePermissionsMatrix> {
@@ -38,6 +39,9 @@ export async function POST(request: NextRequest) {
   }
 
   const safeRole = role as Role
+  if (safeRole === 'admin' && !(await isAdminOwner(profile.id))) {
+    return NextResponse.json({ error: 'Only the owner can edit admin role permissions' }, { status: 403 })
+  }
   const admin = createAdminClient()
   const current = await loadRolePermissions(admin)
   const next = cloneRolePermissions(current)

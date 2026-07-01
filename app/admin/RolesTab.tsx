@@ -17,9 +17,10 @@ import {
 
 interface Props {
   initialRolePermissions: RolePermissionsMatrix
+  canEditAdminRole: boolean
 }
 
-export default function RolesTab({ initialRolePermissions }: Props) {
+export default function RolesTab({ initialRolePermissions, canEditAdminRole }: Props) {
   const baseDefaults = useMemo(() => normalizeRolePermissions(null), [])
   const [rolePermissions, setRolePermissions] = useState<RolePermissionsMatrix>(cloneRolePermissions(initialRolePermissions))
   const [selectedRole, setSelectedRole] = useState<Role>('viewer')
@@ -80,7 +81,7 @@ export default function RolesTab({ initialRolePermissions }: Props) {
       <div className="border border-zinc-800 bg-zinc-950 p-5">
         <p className="text-[10px] tracking-widest uppercase font-mono text-zinc-500 mb-4">Role Defaults</p>
         <div className="flex flex-wrap gap-2">
-          {ROLE_PERMISSION_EDITABLE_ROLES.map(role => (
+          {ROLE_PERMISSION_EDITABLE_ROLES.filter(role => canEditAdminRole || role !== 'admin').map(role => (
             <button
               key={role}
               type="button"
