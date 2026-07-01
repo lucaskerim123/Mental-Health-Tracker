@@ -32,13 +32,13 @@ export default async function IncidentsPage() {
         </div>
         <div className="space-y-2">
           {(incidents as MentalHealthIncident[] | null)?.map(inc => {
-            const description = visibleIncidentText(profile.role, inc, 'description', inc.description)
+            const summary = visibleIncidentText(profile.role, inc, 'brief_summary', inc.brief_summary) ?? 'No summary recorded.'
             return (
               <Link key={inc.id} href={`/incidents/${inc.id}`} className="block min-w-0 max-w-full">
                 <div className="min-w-0 max-w-full border border-zinc-800 hover:border-zinc-700 bg-zinc-950 px-4 py-3.5 flex items-start justify-between gap-3 transition-colors overflow-hidden">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-mono text-zinc-500 break-words [overflow-wrap:anywhere]">{incidentLabel(inc)} - {formatDateTime(inc.occurred_at)}</p>
-                    <p className="min-w-0 max-w-full text-sm font-mono text-zinc-300 mt-0.5 line-clamp-2 break-words [overflow-wrap:anywhere]">{description}</p>
+                    <p className="min-w-0 max-w-full text-sm font-mono text-zinc-300 mt-0.5 line-clamp-2 break-words [overflow-wrap:anywhere]">{summary}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5 min-w-0">
                       {inc.police_called && <span className="text-[9px] font-mono text-red-700 border border-red-900/40 px-1.5 py-0.5 uppercase">Police</span>}
                       {inc.ambulance_called && <span className="text-[9px] font-mono text-orange-700 border border-orange-900/40 px-1.5 py-0.5 uppercase">Ambulance</span>}

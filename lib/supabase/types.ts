@@ -3,6 +3,7 @@ export type Resource = 'incidents' | 'tracker' | 'documents' | 'users' | 'admin'
 export type Action = 'view' | 'view_sensitive' | 'create' | 'edit' | 'delete' | 'manage_users' | 'manage_invites'
 export type FieldVisibilityLevel = 'viewer+' | 'counsellor+' | 'lawyer+' | 'admin only'
 export type IncidentFieldKey =
+  | 'brief_summary'
   | 'description'
   | 'notes'
   | 'personal_notes'
@@ -44,6 +45,7 @@ export interface MentalHealthIncident {
   user_id: string
   occurred_at: string
   severity: number
+  brief_summary: string | null
   description: string
   is_sensitive: boolean
   sensitive_fields: string[]

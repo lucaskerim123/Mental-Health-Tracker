@@ -9,6 +9,7 @@ import type {
 export const REDACTED = 'REDACTED'
 
 export const INCIDENT_FIELD_LABELS: Record<IncidentFieldKey, string> = {
+  brief_summary: 'Brief summary',
   description: 'Incident details',
   notes: 'Notes',
   personal_notes: 'Private notes',
@@ -19,6 +20,7 @@ export const INCIDENT_FIELD_LABELS: Record<IncidentFieldKey, string> = {
 }
 
 export const DEFAULT_INCIDENT_FIELD_VISIBILITY: Record<IncidentFieldKey, FieldVisibilityLevel> = {
+  brief_summary: 'viewer+',
   description: 'viewer+',
   notes: 'viewer+',
   personal_notes: 'admin only',
