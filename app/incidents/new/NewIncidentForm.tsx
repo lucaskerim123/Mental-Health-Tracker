@@ -25,15 +25,26 @@ export default function NewIncidentForm({ trackerSessions }: Props) {
   function set(field: string, value: unknown) { setForm(prev => ({ ...prev, [field]: value })) }
   function setVisibility(field: IncidentFieldKey, value: FieldVisibilityLevel) { setFieldVisibility(prev => ({ ...prev, [field]: value })) }
 
+  function isMissingBriefSummaryColumnError(error: { code?: string | null; message?: string | null } | null) {
+    const message = error?.message?.toLowerCase() ?? ''
+    return error?.code === '42703' || message.includes('brief_summary') && message.includes('column')
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setSaving(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { toast.error('Login expired.'); setSaving(false); return }
     const sensitiveFields = Object.entries(fieldVisibility).filter(([, value]) => value !== 'viewer+').map(([field]) => field)
-    const { error, data } = await supabase.from('mental_health_incidents').insert({ occurred_at: form.occurred_at, severity: form.severity, brief_summary: form.brief_summary.trim() || null, description: form.description.trim(), location: form.location.trim() || null, personal_notes: form.personal_notes.trim() || null, notes: form.notes.trim() || null, professional_note: form.professional_note.trim() || null, outcome: form.outcome.trim() || null, substance_use: form.substance_use, police_called: form.police_called, was_arrested: form.police_called ? form.was_arrested : false, ambulance_called: form.ambulance_called, was_sectioned: form.ambulance_called ? form.was_sectioned : false, is_sensitive: form.is_sensitive, tracker_session_id: form.tracker_session_id, user_id: user.id, people_involved: people, sensitive_fields: sensitiveFields, field_visibility: fieldVisibility satisfies IncidentFieldVisibility }).select().single()
-    if (error) { toast.error('Failed to save: ' + error.message); setSaving(false); return }
-    toast.success('Incident recorded.'); router.push(`/incidents/${data.id}`)
+    const basePayload = { occurred_at: form.occurred_at, severity: form.severity, description: form.description.trim(), location: form.location.trim() || null, personal_notes: form.personal_notes.trim() || null, notes: form.notes.trim() || null, professional_note: form.professional_note.trim() || null, outcome: form.outcome.trim() || null, substance_use: form.substance_use, police_called: form.police_called, was_arrested: form.police_called ? form.was_arrested : false, ambulance_called: form.ambulance_called, was_sectioned: form.ambulance_called ? form.was_sectioned : false, is_sensitive: form.is_sensitive, tracker_session_id: form.tracker_session_id, user_id: user.id, people_involved: people, sensitive_fields: sensitiveFields, field_visibility: fieldVisibility satisfies IncidentFieldVisibility }
+    const withSummary = { ...basePayload, brief_summary: form.brief_summary.trim() || null }
+    let result = await supabase.from('mental_health_incidents').insert(withSummary).select().single()
+    if (result.error && isMissingBriefSummaryColumnError(result.error)) {
+      result = await supabase.from('mental_health_incidents').insert(basePayload).select().single()
+    }
+    if (result.error) { toast.error('Failed to save: ' + result.error.message); setSaving(false); return }
+    toast.success('Incident recorded.')
+    router.push(`/incidents/${result.data.id}`)
   }
 
   return (

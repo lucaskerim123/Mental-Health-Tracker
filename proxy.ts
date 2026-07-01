@@ -83,10 +83,6 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user) {
-    if (pathname === '/login') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-
     // User ban check
     if (pathname !== '/banned') {
       const { data: userBan } = await adminClient.from('bans').select('id')
@@ -94,7 +90,14 @@ export async function proxy(request: NextRequest) {
         .or(`expires_at.is.null,expires_at.gt.${now}`)
         .maybeSingle()
 
-      if (userBan) return NextResponse.redirect(new URL('/banned', request.url))
+      if (userBan) {
+        if (pathname === '/login') return supabaseResponse
+        return NextResponse.redirect(new URL('/banned', request.url))
+      }
+    }
+
+    if (pathname === '/login') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
 

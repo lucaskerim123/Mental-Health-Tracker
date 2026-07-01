@@ -37,12 +37,22 @@ export default function IncidentDetail({ incident, role, isAdmin, trackerSession
   function set(field: string, value: unknown) { setForm(prev => ({ ...prev, [field]: value })) }
   function setVisibility(field: IncidentFieldKey, value: FieldVisibilityLevel) { setFieldVisibility(prev => ({ ...prev, [field]: value })) }
 
+  function isMissingBriefSummaryColumnError(error: { code?: string | null; message?: string | null } | null) {
+    const message = error?.message?.toLowerCase() ?? ''
+    return error?.code === '42703' || message.includes('brief_summary') && message.includes('column')
+  }
+
   async function save() {
     setSaving(true)
     const supabase = createClient()
     const sensitiveFields = Object.entries(fieldVisibility).filter(([, value]) => value !== 'viewer+').map(([field]) => field)
-    const { error } = await supabase.from('mental_health_incidents').update({ occurred_at: form.occurred_at, severity: form.severity, brief_summary: form.brief_summary, description: form.description, location: form.location, personal_notes: form.personal_notes, notes: form.notes, professional_note: form.professional_note, outcome: form.outcome, substance_use: form.substance_use, police_called: form.police_called, was_arrested: form.police_called ? form.was_arrested : false, ambulance_called: form.ambulance_called, was_sectioned: form.ambulance_called ? form.was_sectioned : false, people_involved: people, tracker_session_id: form.tracker_session_id, is_sensitive: form.is_sensitive, sensitive_fields: sensitiveFields, field_visibility: fieldVisibility }).eq('id', incident.id)
-    if (error) toast.error('Save failed: ' + error.message)
+    const basePayload = { occurred_at: form.occurred_at, severity: form.severity, description: form.description, location: form.location, personal_notes: form.personal_notes, notes: form.notes, professional_note: form.professional_note, outcome: form.outcome, substance_use: form.substance_use, police_called: form.police_called, was_arrested: form.police_called ? form.was_arrested : false, ambulance_called: form.ambulance_called, was_sectioned: form.ambulance_called ? form.was_sectioned : false, people_involved: people, tracker_session_id: form.tracker_session_id, is_sensitive: form.is_sensitive, sensitive_fields: sensitiveFields, field_visibility: fieldVisibility }
+    const withSummary = { ...basePayload, brief_summary: form.brief_summary }
+    let result = await supabase.from('mental_health_incidents').update(withSummary).eq('id', incident.id)
+    if (result.error && isMissingBriefSummaryColumnError(result.error)) {
+      result = await supabase.from('mental_health_incidents').update(basePayload).eq('id', incident.id)
+    }
+    if (result.error) toast.error('Save failed: ' + result.error.message)
     else { toast.success('Saved.'); setForm(prev => ({ ...prev, field_visibility: fieldVisibility, sensitive_fields: sensitiveFields, people_involved: people })); setEditing(false) }
     setSaving(false)
   }
