@@ -1,6 +1,6 @@
 ﻿import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getProfile } from '@/lib/auth'
+import { can, getPermissionContext, getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import AppShell from '@/components/layout/AppShell'
 import IncidentDetail from './IncidentDetail'
@@ -20,6 +20,10 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
 
   if (!incident) notFound()
 
+  const { overrides, roleDefaults } = await getPermissionContext(profile.id)
+  const canViewSensitive = can(profile, overrides, 'incidents', 'view_sensitive', roleDefaults)
+  const canManageIncidents = can(profile, overrides, 'incidents', 'edit', roleDefaults) || can(profile, overrides, 'incidents', 'delete', roleDefaults)
+
   return (
     <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
       <main className="max-w-2xl mx-auto px-4 py-8">
@@ -30,8 +34,8 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
         </div>
         <IncidentDetail
           incident={incident as MentalHealthIncident}
-          role={profile.role}
-          isAdmin={profile.role === 'admin' || profile.role === 'owner'}
+          role={canViewSensitive ? 'owner' : profile.role}
+          isAdmin={canManageIncidents}
           trackerSessions={trackerSessions ?? []}
           documents={documents ?? []}
           userId={profile.id}
