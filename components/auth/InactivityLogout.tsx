@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-const INACTIVITY_LIMIT_MS = 5 * 60 * 60 * 1000
+const INACTIVITY_LIMIT_MS = 15 * 60 * 1000
 const LAST_ACTIVITY_KEY = 'mht:last-activity-at'
 const LOGOUT_EVENT_KEY = 'mht:force-logout-at'
 const ACTIVITY_EVENTS = ['click', 'keydown', 'mousemove', 'mousedown', 'touchstart', 'scroll', 'visibilitychange'] as const
