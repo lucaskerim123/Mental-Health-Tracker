@@ -1,3 +1,4 @@
+import { canViewFieldLevel } from './field-visibility'
 import type {
   FieldVisibilityLevel,
   IncidentFieldKey,
@@ -54,23 +55,8 @@ export function normalizeIncidentVisibility(
   return next
 }
 
-const ROLE_RANK: Record<Role, number> = {
-  owner: 5,
-  admin: 4,
-  counsellor: 3,
-  lawyer: 2,
-  viewer: 1,
-}
-
-const FIELD_RANK: Record<FieldVisibilityLevel, number> = {
-  'viewer+': 1,
-  'lawyer+': 2,
-  'counsellor+': 3,
-  'admin only': 4,
-}
-
 export function canViewVisibilityLevel(role: Role, level: FieldVisibilityLevel) {
-  return ROLE_RANK[role] >= FIELD_RANK[level]
+  return canViewFieldLevel(role, level)
 }
 
 export function canViewIncidentField(
