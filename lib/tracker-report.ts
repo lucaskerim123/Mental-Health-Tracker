@@ -181,14 +181,14 @@ export function renderTrackerReportHtml(report: NonNullable<Awaited<ReturnType<t
       <p>Generated ${esc(formatDateTime(generatedAt))}</p>
     </header>
     ${summary}
-    ${sessionNotesBlock}
     ${sleepBlock}
-    ${usageBlock}
+    ${sessionNotesBlock}
     ${moodsBlock}
+    ${usageBlock}
     ${notesBlock}
+    ${incidentsBlock}
     ${entriesBlock}
     ${eventsBlock}
-    ${incidentsBlock}
   `
 
   return { title, body }
