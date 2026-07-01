@@ -156,6 +156,7 @@ export default function UserDetail({ user: initialUser, email, permissions, curr
             <label className="text-[10px] tracking-widest text-zinc-600 uppercase font-mono">Role</label>
             <select value={role} onChange={e => { setRole(e.target.value as Role); setRoleChanged(true) }} disabled={isMe} className="w-full bg-black border border-zinc-800 text-zinc-200 px-3 py-2 text-sm font-mono focus:outline-none disabled:opacity-40">
               <option value="viewer">viewer</option>
+              <option value="lawyer">lawyer</option>
               <option value="counsellor">counsellor</option>
               <option value="admin">admin</option>
             </select>

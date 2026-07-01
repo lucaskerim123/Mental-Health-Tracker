@@ -31,23 +31,26 @@ export default async function TrackerPage() {
         </div>
         <div className="space-y-2 min-w-0">
           {sessions?.map(s => (
-            <Link key={s.id} href={`/tracker/${s.id}`} className="block min-w-0 max-w-full">
+            <div key={s.id} className="block min-w-0 max-w-full">
               <div className="min-w-0 max-w-full border border-zinc-800 hover:border-zinc-700 bg-zinc-950 px-4 py-4 flex items-start justify-between gap-3 transition-colors overflow-hidden">
-                <div className="min-w-0 flex-1">
+                <Link href={`/tracker/${s.id}`} className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap min-w-0">
                     <span className="text-[10px] font-mono text-zinc-400 tracking-widest uppercase break-words [overflow-wrap:anywhere]">{sessionLabel(s)}</span>
                     <span className={`text-[10px] font-mono px-2 py-0.5 tracking-widest uppercase ${!s.date_end ? 'text-amber-700 bg-amber-950/30 border border-amber-900/30' : 'text-zinc-500 bg-zinc-800 border border-zinc-700'}`}>
-                      {!s.date_end ? `ONGOING – DAY ${daysUp(s.date_start)}` : `DAY ${daysUp(s.date_start, s.date_end)}`}
+                      {!s.date_end ? `ONGOING - DAY ${daysUp(s.date_start)}` : `DAY ${daysUp(s.date_start, s.date_end)}`}
                     </span>
                   </div>
-                  <p className="text-xs font-mono text-zinc-500 break-words [overflow-wrap:anywhere]">{formatDate(s.date_start)} {s.date_end ? `→ ${formatDate(s.date_end)}` : '→ present'}</p>
-                </div>
+                  <p className="text-xs font-mono text-zinc-500 break-words [overflow-wrap:anywhere]">{formatDate(s.date_start)} {s.date_end ? `to ${formatDate(s.date_end)}` : 'to present'}</p>
+                </Link>
                 <div className="text-right shrink-0">
                   <p className="text-xs font-mono text-zinc-400 whitespace-nowrap">{s.sleep_hours}h sleep</p>
                   {s.any_incidents && <p className="text-[10px] font-mono text-red-800 mt-0.5">Incidents</p>}
+                  <Link href={`/tracker/${s.id}/report`} className="mt-2 inline-block border border-amber-900/60 px-2 py-1 text-[10px] font-mono uppercase tracking-widest text-amber-700 hover:border-amber-700">
+                    Report
+                  </Link>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
           {!sessions?.length && <p className="text-sm text-zinc-700 font-mono py-8 text-center">No sessions recorded.</p>}
         </div>

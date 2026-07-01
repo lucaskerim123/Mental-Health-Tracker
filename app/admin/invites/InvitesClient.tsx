@@ -21,19 +21,31 @@ function generateToken(): string {
 function inviteMessage(url: string, token: string) {
   const siteUrl = window.location.origin
 
-   return `"Not all doors are seen—only found by those who know where not to look."
+  return `ACCESS DROP - PRIVATE ENTRY
 
-A door stands ajar. It was not meant for all eyes.
-Seek Luke’s tracker: ${siteUrl} — but do not approach as others would.
-The front is watched.
+The vault stirs... but it does not welcome the unworthy.
+What you seek is not behind the door you see - it waits beneath the one you overlook.
 
-Where iron sleeps, a lock awaits. When it whispers for its key, answer in the place carved for it.
+Luke's tracker is sealed beyond: ${siteUrl}
 
-Thy code: ${token}
+The first door is not opened by the path in front of you.
+Look for what the vault hides in plain sight.
 
-This passage is fleeting. Speak of it to none.
+Wake the mechanism.
 
-Should the path collapse, fall back to this:
+When the door gives way, do not stop there.
+The real entry is guarded by the seal.
+
+Press the lock.
+Let the hidden panel surface.
+
+When it asks for proof, enter the code.
+
+CODE: ${token}
+
+This access is temporary. Keep it quiet.
+
+If the vault refuses you, use the fallback:
 ${url}`
 }
 
@@ -110,11 +122,11 @@ export default function InvitesClient({ invites: initialInvites, adminId }: Prop
                   {used && <span className="text-[9px] font-mono text-zinc-600 tracking-widest uppercase">Used</span>}
                   {expired && !used && <span className="text-[9px] font-mono text-red-800 tracking-widest uppercase">Expired</span>}
                 </div>
-                <p className="text-[10px] font-mono text-zinc-600">Expires {formatDateTime(invite.expires_at)} · {invite.token.slice(0, 12)}…</p>
+                <p className="text-[10px] font-mono text-zinc-600">Expires {formatDateTime(invite.expires_at)} · {invite.token.slice(0, 12)}...</p>
               </div>
               <div className="flex items-center gap-2">
                 {!used && !expired && <button onClick={() => copyLink(invite.token)} className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors"><Copy className="w-3.5 h-3.5" /></button>}
-                <button onClick={() => deleteInvite(invite)} className="p-2 text-red-900 hover:text-red-700 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                <button onClick={() => deleteInvite(invite)} className="p-2 text-red-900 hover:text-red-700 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>}
               </div>
             </div>
           )
