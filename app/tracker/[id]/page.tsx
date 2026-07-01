@@ -1,6 +1,6 @@
 ﻿import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getProfile } from '@/lib/auth'
+import { can, getPermissionContext, getProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import AppShell from '@/components/layout/AppShell'
 import TrackerDetail from './TrackerDetail'
@@ -70,8 +70,9 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
 
   if (!session) notFound()
 
-  const canViewSensitive = profile.role !== 'viewer'
-  const canManageTracker = profile.role === 'admin' || profile.role === 'owner'
+  const { overrides, roleDefaults } = await getPermissionContext(profile.id)
+  const canViewSensitive = can(profile, overrides, 'tracker', 'view_sensitive', roleDefaults)
+  const canManageTracker = can(profile, overrides, 'tracker', 'edit', roleDefaults) || can(profile, overrides, 'tracker', 'delete', roleDefaults)
 
   const sensitiveFieldMask = !canViewSensitive
     ? Object.fromEntries(
@@ -110,7 +111,7 @@ export default async function TrackerSessionPage({ params }: { params: Promise<{
           sessionEvents={simpleSessionEvents}
           sessionMoods={sessionMoods ?? []}
           sessionNotes={sessionNotes ?? []}
-          role={profile.role}
+          role={canViewSensitive ? 'owner' : profile.role}
           isAdmin={canManageTracker}
           canViewSensitive={canViewSensitive}
         />
