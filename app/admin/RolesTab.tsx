@@ -17,10 +17,10 @@ import {
 
 interface Props {
   initialRolePermissions: RolePermissionsMatrix
-  canEditAdminRole: boolean
+  canEditAdminRole?: boolean
 }
 
-export default function RolesTab({ initialRolePermissions, canEditAdminRole }: Props) {
+export default function RolesTab({ initialRolePermissions, canEditAdminRole = false }: Props) {
   const baseDefaults = useMemo(() => normalizeRolePermissions(null), [])
   const [rolePermissions, setRolePermissions] = useState<RolePermissionsMatrix>(cloneRolePermissions(initialRolePermissions))
   const [selectedRole, setSelectedRole] = useState<Role>('viewer')
