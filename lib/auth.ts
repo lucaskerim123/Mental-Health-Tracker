@@ -4,6 +4,7 @@ import { ROLE_DEFAULTS } from './supabase/types'
 import type { RolePermissionsMatrix } from './role-permissions'
 import { parseRolePermissions } from './role-permissions'
 import { createAdminClient } from './supabase/admin'
+import { isAdminOwner } from './admin-owner'
 
 export async function getSession() {
   const supabase = await createClient()
@@ -16,6 +17,8 @@ export async function getProfile(): Promise<UserProfile | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const { data } = await supabase.from('users').select('*').eq('id', user.id).single()
+  if (!data) return null
+  if (await isAdminOwner(user.id)) return { ...data, role: 'owner' }
   return data
 }
 
