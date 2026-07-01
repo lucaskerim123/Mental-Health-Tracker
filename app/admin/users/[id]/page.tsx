@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import AppShell from '@/components/layout/AppShell'
 import UserDetail from './UserDetail'
+import OwnerAccountRedacted from './OwnerAccountRedacted'
 import Link from 'next/link'
 import { parseRolePermissions } from '@/lib/role-permissions'
 import { getAdminOwnerId, isAdminOwner } from '@/lib/admin-owner'
@@ -36,6 +37,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const ownerId = await getAdminOwnerId()
   const viewerIsOwner = await isAdminOwner(profile.id)
   const targetIsOwner = ownerId === user.id
+  const redactOwnerAccount = targetIsOwner && !viewerIsOwner
 
   return (
     <AppShell userId={profile.id} role={profile.role} displayName={profile.display_name}>
@@ -45,18 +47,21 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           <span className="text-zinc-700">/</span>
           <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase">User</h1>
         </div>
-        <UserDetail
-          user={user}
-          email={authData?.user?.email ?? ''}
-          permissions={permissions ?? []}
-          currentUserId={profile.id}
-          rolePermissions={rolePermissions}
-          activityLogs={activityLogs ?? []}
-          viewerIsOwner={viewerIsOwner}
-          targetIsOwner={targetIsOwner}
-        />
+        {redactOwnerAccount ? (
+          <OwnerAccountRedacted />
+        ) : (
+          <UserDetail
+            user={user}
+            email={authData?.user?.email ?? ''}
+            permissions={permissions ?? []}
+            currentUserId={profile.id}
+            rolePermissions={rolePermissions}
+            activityLogs={activityLogs ?? []}
+            viewerIsOwner={viewerIsOwner}
+            targetIsOwner={targetIsOwner}
+          />
+        )}
       </main>
     </AppShell>
   )
 }
-
