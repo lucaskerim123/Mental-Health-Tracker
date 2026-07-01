@@ -1,5 +1,7 @@
 import type { UserProfile } from '@/lib/supabase/types'
 
+const REDACTION_MARK = 'REDACTED  I♡EVELYN'
+
 function Row({ label }: { label: string }) {
   return (
     <div className="relative overflow-hidden border border-zinc-800 bg-black/40 px-3 py-3 min-h-[58px]">
@@ -9,8 +11,8 @@ function Row({ label }: { label: string }) {
       <div className="absolute inset-y-2 left-[42%] right-3 overflow-hidden blur-[3px]">
         <div className="h-full w-full border border-red-950/30 bg-red-950/10 opacity-80" />
       </div>
-      <span className="absolute inset-y-0 left-1/2 z-10 flex -translate-x-1/2 items-center justify-center text-[10px] font-mono text-red-800 tracking-[0.32em] uppercase blur-[0.45px] whitespace-nowrap">
-        REDACTED
+      <span className="absolute inset-y-0 left-1/2 z-10 flex -translate-x-1/2 items-center justify-center text-[10px] font-mono text-red-800 tracking-[0.26em] uppercase blur-[0.45px] whitespace-nowrap">
+        {REDACTION_MARK}
       </span>
     </div>
   )
