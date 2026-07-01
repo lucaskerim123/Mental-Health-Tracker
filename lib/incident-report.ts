@@ -70,13 +70,13 @@ export function renderIncidentReportHtml(report: NonNullable<Awaited<ReturnType<
     const visible = canViewDocument(doc, role, userId)
     const label = `Document #${index + 1}`
     if (!visible) return `<article class="card"><p>${esc(`${label}: REDACTED`)}</p><small>${esc(formatDateTime(doc.created_at))}</small></article>`
-    return `<article class="card"><p>${esc(`${label}: ${doc.filename}`)}</p><small>${esc(formatDateTime(doc.created_at))}${doc.is_sensitive ? ' - Sensitive' : ''}</small></article>`
+    if (doc.is_sensitive) return `<article class="card"><p>${esc(`${label}: REDACTED`)}</p><small>${esc(`${formatDateTime(doc.created_at)} - Sensitive`)}</small></article>`
+    return `<article class="card"><p>${esc(`${label}: ${doc.filename}`)}</p><small>${esc(formatDateTime(doc.created_at))}</small></article>`
   }).join('')
 
   const summary = section('Incident Summary', `
     <div class="grid">
-      ${kv('Incident', incidentLabel(incident))}
-      ${kv('Incident ID', incident.id)}
+      ${kv('Incident #', incidentLabel(incident))}
       ${kv('Occurred', formatDateTime(incident.occurred_at))}
       ${kv('Severity', incident.severity)}
       ${kv('Substance use', incident.substance_use ?? 'Not recorded')}
@@ -84,21 +84,21 @@ export function renderIncidentReportHtml(report: NonNullable<Awaited<ReturnType<
       ${kv('Arrested', incident.was_arrested)}
       ${kv('Ambulance called', incident.ambulance_called)}
       ${kv('Sectioned', incident.was_sectioned)}
-      ${kv('Linked session', trackerSession ? sessionLabel(trackerSession) : 'None')}
-      ${kv('Brief summary', visibleIncidentText(role, incident, 'brief_summary', incident.brief_summary))}
+      ${kv('Linked Session #', trackerSession ? sessionLabel(trackerSession) : 'None')}
+      ${kv('Front card summary', visibleIncidentText(role, incident, 'brief_summary', incident.brief_summary))}
     </div>
   `)
 
   const detailBlock = section('Detailed Incident Details', `
-    ${kv('Incident details', visibleIncidentText(role, incident, 'description', incident.description))}
+    ${kv('Detailed Incident Details', visibleIncidentText(role, incident, 'description', incident.description))}
     ${kv('Location', visibleIncidentText(role, incident, 'location', incident.location))}
     ${kv('Who was involved', visiblePeople)}
     ${kv('Notes', visibleIncidentText(role, incident, 'notes', incident.notes))}
     ${kv("What's outcome", visibleIncidentText(role, incident, 'outcome', incident.outcome))}
   `)
 
-  const professionalBlock = section('Professional Notes', `
-    ${kv('Note for counsellor and lawyer', visibleIncidentText(role, incident, 'professional_note', incident.professional_note))}
+  const professionalBlock = section('Professional / Private Notes', `
+    ${kv('Note for counsellor and Lawyer', visibleIncidentText(role, incident, 'professional_note', incident.professional_note))}
     ${kv('Private Notes', visibleIncidentText(role, incident, 'personal_notes', incident.personal_notes))}
   `)
 
