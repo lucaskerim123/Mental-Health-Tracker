@@ -36,7 +36,7 @@ Should the path collapse, fall back to this:
 ${url}`
 }
 
-export default function InvitesClient({ invites: initialInvites, canInviteAdmin }: Props) {
+export default function InvitesClient({ invites: initialInvites }: Props) {
   const [invites, setInvites] = useState(initialInvites)
   const [role, setRole] = useState<Role>('viewer')
   const [expiryDays, setExpiryDays] = useState(7)
@@ -98,8 +98,6 @@ export default function InvitesClient({ invites: initialInvites, canInviteAdmin 
               <option value="viewer">viewer</option>
               <option value="lawyer">lawyer</option>
               <option value="counsellor">counsellor</option>
-              {canInviteAdmin && <option value="admin">admin</option>}
-              {canInviteAdmin && <option value="owner">owner</option>}
             </select>
           </div>
           <div className="space-y-1">
