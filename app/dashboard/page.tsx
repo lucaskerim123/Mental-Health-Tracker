@@ -34,11 +34,19 @@ export default async function DashboardPage() {
     <AppShell role={profile.role} displayName={profile.display_name}>
       <main className="max-w-6xl mx-auto px-4 py-8 min-w-0 overflow-hidden">
         <div className="mb-8 min-w-0">
-          <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase break-words [overflow-wrap:anywhere]">Dashboard</h1>
-          <p className="text-xs text-zinc-600 font-mono mt-1 break-words [overflow-wrap:anywhere]">{formatDate(new Date().toISOString())}</p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-lg font-mono tracking-widest text-zinc-300 uppercase break-words [overflow-wrap:anywhere]">Dashboard</h1>
+              <p className="text-xs text-zinc-600 font-mono mt-1 break-words [overflow-wrap:anywhere]">{formatDate(new Date().toISOString())}</p>
+            </div>
+            {profile.role === 'admin' && (
+              <div className="hidden sm:block min-w-[180px] max-w-[240px]">
+                <LockdownShortcut hasPin={hasPin} active={lockdownActive} />
+              </div>
+            )}
+          </div>
         </div>
-
-        {profile.role === 'admin' && <div className="mb-6"><LockdownShortcut hasPin={hasPin} active={lockdownActive} /></div>}
+        {profile.role === 'admin' && <div className="mb-6 sm:hidden"><LockdownShortcut hasPin={hasPin} active={lockdownActive} /></div>}
 
         {ongoingSession && (
           <Link href={`/tracker/${ongoingSession.id}`} className="block min-w-0 max-w-full">

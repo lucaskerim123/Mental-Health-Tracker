@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Props {
@@ -39,25 +38,21 @@ export default function LockdownShortcut({ hasPin, active }: Props) {
   }
 
   return (
-    <div className={`border p-4 ${active ? 'border-red-900 bg-red-950/20' : 'border-zinc-800 bg-zinc-950'}`}>
-      <div className="flex items-center gap-3 justify-between">
-        <div className="min-w-0">
-          <p className={`text-[10px] font-mono tracking-widest uppercase ${active ? 'text-red-500' : 'text-zinc-500'}`}>Lockdown</p>
-          <p className="mt-1 text-xs font-mono text-zinc-600">
-            {active ? 'Lockdown is active.' : 'Enable lockdown from here.'}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={enableLockdown}
-          disabled={loading || active || !hasPin}
-          className="flex shrink-0 items-center gap-2 border border-red-900/50 px-3 py-2 text-[10px] font-mono uppercase tracking-widest text-red-700 transition-colors hover:border-red-700 hover:text-red-500 disabled:opacity-40"
-        >
-          <AlertTriangle className="h-3 w-3" />
-          {loading ? 'Enabling...' : active ? 'Enabled' : 'Enable'}
-        </button>
+    <div className={`flex items-center justify-between gap-3 border-b pb-3 ${active ? 'border-red-950/50' : 'border-zinc-900/80'}`}>
+      <div className="min-w-0">
+        <p className={`text-[9px] font-mono tracking-[0.25em] uppercase ${active ? 'text-red-700' : 'text-zinc-700'}`}>Lockdown</p>
+        <p className="mt-1 text-[10px] font-mono text-zinc-600">
+          {active ? 'Currently active.' : hasPin ? 'PIN ready.' : 'Configure PIN first.'}
+        </p>
       </div>
-      {!hasPin && <p className="mt-3 text-[10px] font-mono text-red-800">Emergency PIN is not set yet.</p>}
+      <button
+        type="button"
+        onClick={enableLockdown}
+        disabled={loading || active || !hasPin}
+        className="shrink-0 text-[10px] font-mono tracking-widest uppercase text-zinc-500 transition-colors hover:text-zinc-300 disabled:opacity-40"
+      >
+        {loading ? 'Enabling...' : active ? 'Enabled' : 'Enable'}
+      </button>
     </div>
   )
 }
